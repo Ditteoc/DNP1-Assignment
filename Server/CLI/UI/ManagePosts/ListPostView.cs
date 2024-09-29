@@ -6,7 +6,6 @@ namespace CLI.UI.ManagePosts;
 public class ListPostView
 {
     private readonly IRepository<Post> _postRepository;
-    private readonly IRepository<Comment> _commentRepository;
 
     public ListPostView(IRepository<Post> postRepository)
     {
@@ -25,7 +24,7 @@ public class ListPostView
         Console.WriteLine("Listing all posts:");
         foreach (var post in posts)
         {
-            Console.WriteLine($"ID: {post.Id}, Title: {post.Title}, Body: {post.Body}, Comments: {post.Comments.Count}");
+            Console.WriteLine($"ID: {post.Id}, Title: {post.Title}, Body: {post.Body}");
         }
     }
 }

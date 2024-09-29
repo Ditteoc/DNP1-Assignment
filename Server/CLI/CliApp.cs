@@ -30,7 +30,7 @@ public class CliApp
             _createPostView = new CreatePostView(postRepository, userRepository);
             _deletePostView = new DeletePostView(postRepository);
 
-            _listCommentView = new ListCommentView(commentRepository);
+            _listCommentView = new ListCommentView(commentRepository, userRepository);
             _createCommentView = new CreateCommentView(userRepository, postRepository, commentRepository);  // Correct order
             _deleteCommentView = new DeleteCommentView(commentRepository);
         }
@@ -48,7 +48,7 @@ public class CliApp
                 Console.WriteLine("5. List all Posts");
                 Console.WriteLine("6. Delete Post");
                 Console.WriteLine("7. Add new Comment");
-                Console.WriteLine("8.List all Comments");
+                Console.WriteLine("8. List all Comments");
                 Console.WriteLine("9. Delete Comment");
                 Console.WriteLine("0. Exit");
                 
