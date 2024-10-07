@@ -12,9 +12,9 @@ public class ListUserView
         _userRepository = userRepository;
     }
 
-    public void ListUsers()
+    public async Task ListUsers()
     {
-        var users = _userRepository.GetMany().ToList();
+        var users = (await _userRepository.GetManyAsync()).ToList();
 
         if (users.Any())
         {

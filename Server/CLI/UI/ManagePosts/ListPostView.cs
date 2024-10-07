@@ -12,9 +12,9 @@ public class ListPostView
         _postRepository = postRepository;
     }
 
-    public void ListPosts()
+    public async Task ListPosts()
     {
-        var posts = _postRepository.GetMany().ToList();
+        var posts = (await _postRepository.GetManyAsync()).ToList();
         if (posts.Count == 0)
         {
             Console.WriteLine("No posts found.");

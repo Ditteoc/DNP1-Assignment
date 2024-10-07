@@ -19,8 +19,8 @@ public class CreateUserView
         Console.WriteLine("Enter username: ");
         string userName = Console.ReadLine();
 
-        var existingUser = _userRepository.GetMany()
-            .FirstOrDefault(u => u.UserName == userName);
+        var users = await _userRepository.GetManyAsync() ?? Enumerable.Empty<User>();
+        var existingUser = users.FirstOrDefault(u => u.UserName == userName);
         if (existingUser != null)
         {
             Console.WriteLine(

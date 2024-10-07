@@ -65,7 +65,7 @@ namespace FileRepositories
 
         public async Task UpdateAsync(T entity)
         {
-            int entityId = _getId(entity);
+            int entityId = _getId( entity);
             var existingEntity = entities.SingleOrDefault(e => _getId(e) == entityId);
 
             if (existingEntity == null)
@@ -97,15 +97,17 @@ namespace FileRepositories
 
             if (entity == null)
             {
-                return Task.FromResult(entity);
+                return Task.FromException<T>(new InvalidOperationException($"Entity with ID '{id}' not found."));
             }
 
             return Task.FromResult(entity);
         }
 
-        public IQueryable<T> GetMany()
+        public async Task<IEnumerable<T>> GetManyAsync()
         {
-            return entities.AsQueryable();
+            await LoadEntitiesAsync();
+            return entities.AsEnumerable();
         }
+        
     }
 }

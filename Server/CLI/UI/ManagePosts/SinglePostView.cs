@@ -21,6 +21,11 @@ public class SinglePostView
     {
         // Retrieve the post based on postId from the repository
         var post = await _postRepository.GetSingleAsync(postId);
+        if (post == null)
+        {
+            Console.WriteLine($"Post {postId} not found");
+            return;
+        }
         
         // Display the post details
         Console.WriteLine($"Post ID: {post.Id}");
@@ -29,7 +34,7 @@ public class SinglePostView
         Console.WriteLine($"Comments:");
         
         // Retrieve all comments for the given postId and display them
-        var comments = _commentRepository.GetMany().Where(c => c.PostId == postId);
+        var comments = (await _commentRepository.GetManyAsync()).Where(c => c.PostId == postId);
         foreach (var comment in comments)
         {
             // Display each comment's body and the associated user ID

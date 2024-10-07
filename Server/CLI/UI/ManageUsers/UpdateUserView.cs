@@ -12,7 +12,7 @@ public class UpdateUserView
         _userRepository = userRepository;
     }
 
-    public async Task UpdateUserAsync()
+    public async Task UpdateAsync()
     {
         Console.WriteLine("\nEnter the User ID to update:");
         if (int.TryParse(Console.ReadLine(), out int userId))
@@ -23,8 +23,7 @@ public class UpdateUserView
                 Console.WriteLine("Enter new Username: ");
                 string newUsername = Console.ReadLine();
 
-                var existingUser = _userRepository.GetMany().FirstOrDefault(u =>
-                    u.UserName == newUsername && u.Id != userId);
+                var existingUser = (await _userRepository.GetManyAsync()).FirstOrDefault(u => u.UserName == newUsername && u.Id != userId);
                 if (existingUser != null)
                 {
                     Console.WriteLine("Username already exists, Please enter a different username");
