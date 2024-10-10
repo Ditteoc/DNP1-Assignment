@@ -1,4 +1,5 @@
-﻿using Entities;
+﻿using DTOs;  // Importér dine DTO'er
+using Entities;
 using Microsoft.AspNetCore.Mvc;
 using RepositoryContracts;
 
@@ -6,7 +7,6 @@ namespace WebAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-
 public class PostsController : ControllerBase
 {
     private readonly IRepository<User> _userRepository;
@@ -18,12 +18,51 @@ public class PostsController : ControllerBase
         _userRepository = userRepository;
         _postRepository = postRepository;
     }
+
+    // Opret en ny post
+    [HttpPost]
+    public async Task<IActionResult> CreatePost([FromBody] CreatePostDTO requestPost)
+    {
+        if (requestPost == null)
+        {
+            return BadRequest();
+        }
+
+        // Check, om brugeren eksisterer
+        var user = await _userRepository.GetSingleAsync(requestPost.UserId);
+        if (user == null)
+        {
+            return NotFound($"User {requestPost.UserId} not found");
+        }
+
+        // Map CreatePostDTO til en ny Post entity
+        var newPost = new Post
+        {
+            Title = requestPost.Title,
+            Body = requestPost.Body,
+            UserId = requestPost.UserId
+        };
+
+        var createdPost = await _postRepository.AddAsync(newPost);
+
+        // Opret et PostDTO objekt til at returnere den oprettede post
+        var postDto = new PostDTO
+        {
+            Id = createdPost.Id,
+            Title = createdPost.Title,
+            Body = createdPost.Body,
+            UserName = user.UserName,
+            Comments = new List<CommentDTO>()  // Tom liste ved oprettelse
+        };
+
+        return CreatedAtAction(nameof(GetPostById), new { id = postDto.Id }, postDto);
+    }
     
-    // Get api/posts
-    [HttpGet]
+    // Get api/posts - Returner en liste af PostDTO'er
+    [HttpGet("search")]
     public async Task<IActionResult> GetManyPosts(string? title, int? userId, string? userName)
     {
-        var posts = await _postRepository.GetManyAsync(); // Use await for async method
+        var posts = await _postRepository.GetManyAsync();
 
         if (!string.IsNullOrWhiteSpace(title))
         {
@@ -48,49 +87,30 @@ public class PostsController : ControllerBase
             }
         }
 
-        var filteredPosts = posts.ToList();
-        return Ok(filteredPosts);
-    }
-    
-    // Get api/post/{id}
-    // GetSingleAsync method
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetPostById(int id)
-    {
-        var post = _postRepository.GetSingleAsync(id);
-        if (post == null)
+        // Hent data og konverter til PostDTO
+        var postDtos = new List<PostDTO>();
+        foreach (var post in posts)
         {
-            return NotFound();
+            var user = await _userRepository.GetSingleAsync(post.UserId);
+
+            var postDto = new PostDTO
+            {
+                Id = post.Id,
+                Title = post.Title,
+                Body = post.Body,
+                UserName = user.UserName,
+                Comments = new List<CommentDTO>()  // Som tom liste
+            };
+
+            postDtos.Add(postDto);
         }
 
-        return Ok(post);
+        return Ok(postDtos);
     }
-    
-    // Add/(Create posts
-    [HttpPost]
-    public async Task<IActionResult> CreatePost([FromBody] Post post)
-    {
-        if (post == null)
-        {
-            return BadRequest();
-        }
-        
-        // Check if the user exists
-        var user = _userRepository.GetSingleAsync(post.UserId);
-        if (user == null)
-        {
-            return NotFound($"User {post.UserId} not found");
-        }
-        
-        var createPost = await _postRepository.AddAsync(post);
-        return CreatedAtAction(nameof(GetSingleAsync), new { id = createPost.Id },
-            createPost);
-    }
-    
-    // Get post by ID
-    // Get api/posts/{id}
+
+    // Get api/posts/{id} - Returner en enkelt PostDTO
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetSingleAsync(int id)
+    public async Task<IActionResult> GetPostById(int id)
     {
         var post = await _postRepository.GetSingleAsync(id);
         if (post == null)
@@ -98,19 +118,40 @@ public class PostsController : ControllerBase
             return NotFound();
         }
 
-        return Ok(post);
+        var user = await _userRepository.GetSingleAsync(post.UserId);
+
+        // Opret PostDTO og returner det
+        var postDto = new PostDTO
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Body = post.Body,
+            UserName = user.UserName,
+            Comments = new List<CommentDTO>()  // Ingen kommentarer i dette tilfælde
+        };
+
+        return Ok(postDto);
     }
     
-    
-    
-    // PUT: api/posts/{id}
+
+    // PUT: api/posts/{id} - Opdatering af post
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] Post post)
+    public async Task<IActionResult> Update(int id, [FromBody] PostDTO postDto)
     {
-        if (post == null || post.Id != id)
+        if (postDto == null || postDto.Id != id)
         {
             return BadRequest();
         }
+
+        var post = await _postRepository.GetSingleAsync(id);
+        if (post == null)
+        {
+            return NotFound();
+        }
+
+        // Opdater post entiteten
+        post.Title = postDto.Title;
+        post.Body = postDto.Body;
 
         try
         {

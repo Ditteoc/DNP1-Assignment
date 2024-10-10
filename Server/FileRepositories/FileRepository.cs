@@ -89,6 +89,7 @@ namespace FileRepositories
 
             entities.Remove(entityToRemove);
             await SaveEntitiesAsync();
+            
         }
 
         public Task<T> GetSingleAsync(int id)

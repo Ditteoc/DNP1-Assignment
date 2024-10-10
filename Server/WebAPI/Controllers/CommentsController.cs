@@ -1,130 +1,172 @@
-﻿using Entities;
-using Microsoft.AspNetCore.Http.HttpResults;
+﻿using DTOs;  // Importér DTO'erne
+using Entities;
 using Microsoft.AspNetCore.Mvc;
 using RepositoryContracts;
 
 namespace WebAPI.Controllers;
 
 [ApiController]
-[Route("api/posts/{postId}/comments")]
-
+[Route("api/[controller]")]
 public class CommentsController : ControllerBase
 {
-    private readonly IRepository<Comment> _commentRepository;
-    private readonly IRepository<Post> _postRepository;
     private readonly IRepository<User> _userRepository;
+    private readonly IRepository<Post> _postRepository;
+    private readonly IRepository<Comment> _commentRepository;
 
-    public CommentsController(IRepository<Comment> commentRepository,
-        IRepository<Post> postRepository, IRepository<User> userRepository)
+    public CommentsController(IRepository<User> userRepository,
+        IRepository<Post> postRepository,
+        IRepository<Comment> commentRepository)
     {
-        _commentRepository = commentRepository;
-        _postRepository = postRepository;
         _userRepository = userRepository;
+        _postRepository = postRepository;
+        _commentRepository = commentRepository;
     }
-    
-    // Get many comments
-    // api/posts/{postId}/comments
-    [HttpGet]
-    public async Task<IActionResult> GetManyComments(int postId)
+
+    [HttpPost]
+    public async Task<IActionResult> CreateComment([FromBody] CreateCommentDTO requestComment)
     {
-        var comments = await _commentRepository.GetManyAsync(); // Use await on async method
-        var filteredComments = comments.Where(c => c.PostId == postId).ToList(); // Add filtering by postId if needed
-        return Ok(filteredComments);
+        if (requestComment == null)
+        {
+            return BadRequest();
+        }
+
+        // Tjek, om brugeren og posten eksisterer
+        var user = await _userRepository.GetSingleAsync(requestComment.UserId);
+        if (user == null)
+        {
+            return NotFound($"User {requestComment.UserId} not found");
+        }
+
+        var post = await _postRepository.GetSingleAsync(requestComment.PostId);
+        if (post == null)
+        {
+            return NotFound($"Post {requestComment.PostId} not found");
+        }
+
+        // Map CreateCommentDTO til en ny Comment entity
+        var newComment = new Comment
+        {
+            Body = requestComment.Body,
+            UserId = requestComment.UserId,
+            PostId = requestComment.PostId
+        };
+
+        var createdComment = await _commentRepository.AddAsync(newComment);
+
+        // Map Comment entity til CommentDTO og returner
+        var commentDto = new CommentDTO
+        {
+            Id = createdComment.Id,
+            Body = createdComment.Body,
+            UserName = user.UserName,  // Brugernavn fra bruger, der skrev kommentaren
+            PostId = createdComment.PostId
+        };
+
+        return CreatedAtAction(nameof(GetCommentById), new { id = commentDto.Id }, commentDto);
     }
-    // GET: api/posts/{postId}/comments/{id}
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetSingle(int postId, int id)
+    
+    // Get api/comments - Returner en liste af kommentarer
+    [HttpGet]
+    public async Task<IActionResult> GetManyComments(int? postId, int? userId)
+    {
+        var comments = await _commentRepository.GetManyAsync();
+
+        if (postId.HasValue)
         {
-            var comment = await _commentRepository.GetSingleAsync(id);
-
-            if (comment == null || comment.PostId != postId)
-            {
-                return NotFound();
-            }
-
-            return Ok(comment);
+            comments = comments.Where(c => c.PostId == postId.Value);
         }
 
-        // POST: api/posts/{postId}/comments
-        [HttpPost]
-        public async Task<IActionResult> Create(int postId, [FromBody] Comment comment)
+        if (userId.HasValue)
         {
-            if (comment == null || comment.PostId != postId)
-            {
-                return BadRequest();
-            }
+            comments = comments.Where(c => c.UserId == userId.Value);
+        }
 
-            // Check if the post exists
-            var post = await _postRepository.GetSingleAsync(postId);
-            if (post == null)
-            {
-                return NotFound($"Post with ID {postId} not found.");
-            }
-
-            // Check if the user exists
+        // Map Comment entity til CommentDTO
+        var commentDtos = new List<CommentDTO>();
+        foreach (var comment in comments)
+        {
             var user = await _userRepository.GetSingleAsync(comment.UserId);
-            if (user == null)
+            var commentDto = new CommentDTO
             {
-                return NotFound($"User with ID {comment.UserId} not found.");
-            }
+                Id = comment.Id,
+                Body = comment.Body,
+                UserName = user.UserName,
+                PostId = comment.PostId
+            };
 
-            var createdComment = await _commentRepository.AddAsync(comment);
-            return CreatedAtAction(nameof(GetSingle), new { postId = postId, id = createdComment.Id }, createdComment);
+            commentDtos.Add(commentDto);
         }
 
-        // PUT: api/posts/{postId}/comments/{id}
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int postId, int id, [FromBody] Comment comment)
+        return Ok(commentDtos);
+    }
+
+    // Get api/comments/{id} - Returner en enkelt kommentar
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetCommentById(int id)
+    {
+        var comment = await _commentRepository.GetSingleAsync(id);
+        if (comment == null)
         {
-            if (comment == null || comment.Id != id || comment.PostId != postId)
-            {
-                return BadRequest();
-            }
-
-            try
-            {
-                var existingComment = await _commentRepository.GetSingleAsync(id);
-                if (existingComment == null || existingComment.PostId != postId)
-                {
-                    return NotFound();
-                }
-
-                // Check if the user exists
-                var user = await _userRepository.GetSingleAsync(comment.UserId);
-                if (user == null)
-                {
-                    return NotFound($"User with ID {comment.UserId} not found.");
-                }
-
-                await _commentRepository.UpdateAsync(comment);
-                return NoContent();
-            }
-            catch (InvalidOperationException)
-            {
-                return NotFound();
-            }
+            return NotFound();
         }
 
-        // DELETE: api/posts/{postId}/comments/{id}
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int postId, int id)
+        var user = await _userRepository.GetSingleAsync(comment.UserId);
+
+        // Map Comment entity til CommentDTO
+        var commentDto = new CommentDTO
         {
-            try
-            {
-                var comment = await _commentRepository.GetSingleAsync(id);
-                if (comment == null || comment.PostId != postId)
-                {
-                    return NotFound();
-                }
+            Id = comment.Id,
+            Body = comment.Body,
+            UserName = user.UserName,
+            PostId = comment.PostId
+        };
 
-                await _commentRepository.DeleteAsync(id);
-                return NoContent();
-            }
-            catch (InvalidOperationException)
-            {
-                return NotFound();
-            }
-        }
+        return Ok(commentDto);
     }
 
     
+
+    // PUT: api/comments/{id} - Opdater en kommentar
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateComment(int id, [FromBody] CommentDTO commentDto)
+    {
+        if (commentDto == null || commentDto.Id != id)
+        {
+            return BadRequest();
+        }
+
+        var comment = await _commentRepository.GetSingleAsync(id);
+        if (comment == null)
+        {
+            return NotFound();
+        }
+
+        // Opdater kommentarens indhold
+        comment.Body = commentDto.Body;
+
+        try
+        {
+            await _commentRepository.UpdateAsync(comment);
+            return NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound();
+        }
+    }
+
+    // DELETE: api/comments/{id} - Slet en kommentar
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteComment(int id)
+    {
+        try
+        {
+            await _commentRepository.DeleteAsync(id);
+            return NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound();
+        }
+    }
+}

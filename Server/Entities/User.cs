@@ -6,7 +6,7 @@ public class User
     {
         // Constructor for EF Core
     }
-    public User(int id, string userName, string password)
+    public User(int id, string userName,string email, string password)
     {
         Id = id;
         UserName = userName;
