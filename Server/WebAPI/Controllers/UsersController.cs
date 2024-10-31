@@ -22,13 +22,17 @@ public class UsersController : ControllerBase
     {
         try
         {
-            // Sørg for, at brugernavn ikke er tomt eller null
+            // Validering af brugernavn og password
             if (string.IsNullOrWhiteSpace(requestUser.UserName))
             {
                 return BadRequest(new { error = "User name is required" });
             }
+            if (string.IsNullOrWhiteSpace(requestUser.Password))
+            {
+                return BadRequest(new { error = "Password is required" });
+            }
 
-            // Hent alle brugere og tjek om brugernavn allerede findes
+            // Tjek om brugernavn allerede findes
             var users = await _userRepository.GetManyAsync();
             var existingUser = users.FirstOrDefault(u => u.UserName == requestUser.UserName);
 
@@ -37,31 +41,28 @@ public class UsersController : ControllerBase
                 return Conflict(new { error = "User already exists" });
             }
 
-            // Opret en ny bruger entitet
-            User user = new User
+            // Opret ny bruger entitet
+            var user = new User
             {
                 UserName = requestUser.UserName,
                 Password = requestUser.Password // I en reel app skal adgangskoden hashes
             };
 
-            // Tilføj brugeren til repository
-            User createdUser = await _userRepository.AddAsync(user);
+            var createdUser = await _userRepository.AddAsync(user);
 
-            // Konverter til UserDTO
-            UserDTO dto = new UserDTO
+            // Returner som UserDTO
+            var dto = new UserDTO
             {
                 Id = createdUser.Id,
                 Username = createdUser.UserName
             };
 
-            // Returner 201 Created med DTO og lokationen af den nye ressource
             return CreatedAtAction(nameof(GetUser), new { id = dto.Id }, dto);
         }
         catch (Exception e)
         {
-            // Log fejlen og returnér 500 Internal Server Error
             Console.WriteLine($"Error occurred in creating new user: {e.Message}");
-            return StatusCode(500, e.Message);
+            return StatusCode(500, "An error occurred while creating the user.");
         }
     }
 
@@ -75,11 +76,11 @@ public class UsersController : ControllerBase
             return NotFound("User not found");
         }
 
-        // Returner UserDTO for at beskytte følsomme oplysninger
+        // Returner UserDTO
         var userDto = new UserDTO
         {
             Id = user.Id,
-            Username = user.UserName // Sørg for, at dette matcher din DTO's definition
+            Username = user.UserName
         };
 
         return Ok(userDto);
@@ -92,16 +93,14 @@ public class UsersController : ControllerBase
         try
         {
             var users = await _userRepository.GetManyAsync();
-            var filteredUsers = users;
 
-            // Filtrer brugere efter søgeparameter
+            // Filtrer brugere baseret på søgeparameter, hvis den er angivet
             if (!string.IsNullOrWhiteSpace(search))
             {
-                filteredUsers = users.Where(u => u.UserName.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+                users = users.Where(u => u.UserName.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
-            // Konverter til DTO'er for at beskytte følsomme oplysninger
-            var usersDto = filteredUsers.Select(user => new UserDTO
+            var usersDto = users.Select(user => new UserDTO
             {
                 Id = user.Id,
                 Username = user.UserName
@@ -112,7 +111,7 @@ public class UsersController : ControllerBase
         catch (Exception e)
         {
             Console.WriteLine($"Error occurred in GetManyUsers: {e.Message}");
-            return StatusCode(404, "The requested resource could not be found on the server");
+            return StatusCode(500, "An error occurred while retrieving users.");
         }
     }
 
@@ -120,9 +119,9 @@ public class UsersController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDTO userDto)
     {
-        if (id != userDto.Id)
+        if (userDto == null || id != userDto.Id)
         {
-            return BadRequest("User id is invalid");
+            return BadRequest("User id is invalid or data is missing");
         }
 
         try
@@ -133,11 +132,11 @@ public class UsersController : ControllerBase
                 return NotFound("User not found");
             }
 
-            // Opdater brugeroplysninger (kun de nødvendige felter)
-            existingUser.UserName = userDto.Username;
-            if (!string.IsNullOrEmpty(userDto.Password))
+            // Opdater kun de nødvendige felter
+            existingUser.UserName = userDto.Username ?? existingUser.UserName;
+            if (!string.IsNullOrWhiteSpace(userDto.Password))
             {
-                existingUser.Password = userDto.Password; // Igen, husk at hashe i virkeligheden
+                existingUser.Password = userDto.Password; // Adgangskode skal hashes
             }
 
             await _userRepository.UpdateAsync(existingUser);

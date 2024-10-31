@@ -1,19 +1,16 @@
-﻿using DTOs;  // Importér dine DTO'er
-using Entities;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using RepositoryContracts;
-
-namespace WebAPI.Controllers;
+using Entities;
+using DTOs;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("[controller]")]
 public class PostsController : ControllerBase
 {
     private readonly IRepository<User> _userRepository;
     private readonly IRepository<Post> _postRepository;
 
-    public PostsController(IRepository<User> userRepository,
-        IRepository<Post> postRepository)
+    public PostsController(IRepository<User> userRepository, IRepository<Post> postRepository)
     {
         _userRepository = userRepository;
         _postRepository = postRepository;
@@ -98,7 +95,7 @@ public class PostsController : ControllerBase
                 Id = post.Id,
                 Title = post.Title,
                 Body = post.Body,
-                UserName = user.UserName,
+                UserName = user?.UserName ?? "Unknown",
                 Comments = new List<CommentDTO>()  // Som tom liste
             };
 
@@ -126,7 +123,7 @@ public class PostsController : ControllerBase
             Id = post.Id,
             Title = post.Title,
             Body = post.Body,
-            UserName = user.UserName,
+            UserName = user?.UserName ?? "Unknown",
             Comments = new List<CommentDTO>()  // Ingen kommentarer i dette tilfælde
         };
 

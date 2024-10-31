@@ -1,4 +1,4 @@
-﻿using DTOs;  // Importér DTO'erne
+﻿using DTOs;
 using Entities;
 using Microsoft.AspNetCore.Mvc;
 using RepositoryContracts;
@@ -22,12 +22,13 @@ public class CommentsController : ControllerBase
         _commentRepository = commentRepository;
     }
 
+    // Opret en ny kommentar
     [HttpPost]
     public async Task<IActionResult> CreateComment([FromBody] CreateCommentDTO requestComment)
     {
         if (requestComment == null)
         {
-            return BadRequest();
+            return BadRequest("Request body cannot be null");
         }
 
         // Tjek, om brugeren og posten eksisterer
@@ -71,6 +72,7 @@ public class CommentsController : ControllerBase
     {
         var comments = await _commentRepository.GetManyAsync();
 
+        // Filtrer baseret på `postId` og `userId`
         if (postId.HasValue)
         {
             comments = comments.Where(c => c.PostId == postId.Value);
@@ -81,21 +83,21 @@ public class CommentsController : ControllerBase
             comments = comments.Where(c => c.UserId == userId.Value);
         }
 
+        // Hent alle brugere én gang for at undgå gentagende opslag
+        var users = await _userRepository.GetManyAsync();
+
         // Map Comment entity til CommentDTO
-        var commentDtos = new List<CommentDTO>();
-        foreach (var comment in comments)
+        var commentDtos = comments.Select(comment =>
         {
-            var user = await _userRepository.GetSingleAsync(comment.UserId);
-            var commentDto = new CommentDTO
+            var user = users.FirstOrDefault(u => u.Id == comment.UserId);
+            return new CommentDTO
             {
                 Id = comment.Id,
                 Body = comment.Body,
-                UserName = user.UserName,
+                UserName = user?.UserName ?? "Unknown",
                 PostId = comment.PostId
             };
-
-            commentDtos.Add(commentDto);
-        }
+        }).ToList();
 
         return Ok(commentDtos);
     }
@@ -107,7 +109,7 @@ public class CommentsController : ControllerBase
         var comment = await _commentRepository.GetSingleAsync(id);
         if (comment == null)
         {
-            return NotFound();
+            return NotFound("Comment not found");
         }
 
         var user = await _userRepository.GetSingleAsync(comment.UserId);
@@ -117,14 +119,12 @@ public class CommentsController : ControllerBase
         {
             Id = comment.Id,
             Body = comment.Body,
-            UserName = user.UserName,
+            UserName = user?.UserName ?? "Unknown",
             PostId = comment.PostId
         };
 
         return Ok(commentDto);
     }
-
-    
 
     // PUT: api/comments/{id} - Opdater en kommentar
     [HttpPut("{id}")]
@@ -132,13 +132,13 @@ public class CommentsController : ControllerBase
     {
         if (commentDto == null || commentDto.Id != id)
         {
-            return BadRequest();
+            return BadRequest("Invalid comment data or ID mismatch");
         }
 
         var comment = await _commentRepository.GetSingleAsync(id);
         if (comment == null)
         {
-            return NotFound();
+            return NotFound("Comment not found");
         }
 
         // Opdater kommentarens indhold
@@ -151,7 +151,7 @@ public class CommentsController : ControllerBase
         }
         catch (InvalidOperationException)
         {
-            return NotFound();
+            return StatusCode(500, "An error occurred while updating the comment");
         }
     }
 
@@ -166,7 +166,7 @@ public class CommentsController : ControllerBase
         }
         catch (InvalidOperationException)
         {
-            return NotFound();
+            return NotFound("Comment not found");
         }
     }
 }
