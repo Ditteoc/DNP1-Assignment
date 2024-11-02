@@ -149,25 +149,30 @@ public class UsersController : ControllerBase
         }
     }
 
-    // Slet en bruger baseret på ID
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteUser(int id)
+// Slet en bruger baseret på en DeleteUserDTO
+    [HttpDelete]
+    public async Task<IActionResult> DeleteUser([FromBody] DeleteUserDTO deleteUserDto)
     {
+        if (deleteUserDto == null || deleteUserDto.Id <= 0)
+        {
+            return BadRequest("Invalid user data. Please provide a valid user ID.");
+        }
+
         try
         {
-            var user = await _userRepository.GetSingleAsync(id);
+            var user = await _userRepository.GetSingleAsync(deleteUserDto.Id);
             if (user == null)
             {
-                return NotFound("User not found");
+                return NotFound(new { error = "User not found" });
             }
 
-            await _userRepository.DeleteAsync(id);
+            await _userRepository.DeleteAsync(deleteUserDto.Id);
             return NoContent();
         }
         catch (Exception e)
         {
             Console.WriteLine($"Error occurred in DeleteUser: {e.Message}");
-            return StatusCode(500, "An error occurred while deleting the user.");
+            return StatusCode(500, new { error = "An error occurred while deleting the user." });
         }
     }
 }

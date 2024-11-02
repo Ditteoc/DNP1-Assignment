@@ -1,0 +1,40 @@
+@page "/users"
+@using BlazorApp.Services
+@using DTOs
+@inject IUserService UserService
+
+<h3>Users</h3>
+
+@if (users == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!users.Any())
+{
+    <p>No users found.</p>
+}
+else
+{
+    <ul>
+        @foreach (var user in users)
+        {
+            <li>@user.Name (@user.Email)</li> <!-- Tilpas felter efter DTO'ens struktur -->
+        }
+    </ul>
+}
+
+@code {
+    private IEnumerable<UserDTO> users = Array.Empty<UserDTO>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            users = await UserService.GetUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error fetching users: {ex.Message}");
+        }
+    }
+}

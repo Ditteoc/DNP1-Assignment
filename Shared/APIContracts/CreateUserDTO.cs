@@ -8,5 +8,13 @@ public class CreateUserDTO // To receive data from the client, when a new user i
     public string UserName { get; set; }
     
     [Required]
+    public string Name { get; set; }
+    
+    [Required]
+    public string Email { get; set; }
+    
+    [Required]
     public string Password { get; set; }
+    
+    
 }
