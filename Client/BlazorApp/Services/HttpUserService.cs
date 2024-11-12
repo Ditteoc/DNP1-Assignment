@@ -5,31 +5,31 @@ namespace BlazorApp.Services;
 
 public class HttpUserService : IUserService
 {
-    private readonly HttpClient client;
+    private readonly HttpClient _client;
 
     public HttpUserService(HttpClient client)
     {
-        this.client = client;
+        _client = client;
     }
 
     public async Task<UserDTO> AddUserAsync(CreateUserDTO request)
     {
         try
         {
-            HttpResponseMessage response = await client.PostAsJsonAsync("users", request);
+            HttpResponseMessage response = await _client.PostAsJsonAsync("api/users", request);
+            response.EnsureSuccessStatusCode();
+
             string responseContent = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception($"Failed to add user: {responseContent}");
-            }
-
             return JsonSerializer.Deserialize<UserDTO>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            Console.Error.WriteLine($"Error adding user: {ex.Message}");
-            throw; // Rethrow exception to propagate the error if necessary
+            Console.Error.WriteLine($"HTTP Request Error: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                Console.Error.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+            }
+            throw; // Genudkastning af undtagelsen for at sikre, at den håndteres højere oppe i kaldstakken
         }
     }
 
@@ -37,7 +37,7 @@ public class HttpUserService : IUserService
     {
         try
         {
-            var user = await client.GetFromJsonAsync<UserDTO>($"users/{id}");
+            var user = await _client.GetFromJsonAsync<UserDTO>($"api/users/{id}");
             if (user == null)
             {
                 throw new Exception("User not found.");
@@ -50,12 +50,13 @@ public class HttpUserService : IUserService
             throw;
         }
     }
+    
 
     public async Task<IEnumerable<UserDTO>> GetUsersAsync()
     {
         try
         {
-            return await client.GetFromJsonAsync<IEnumerable<UserDTO>>("users") ?? new List<UserDTO>();
+            return await _client.GetFromJsonAsync<IEnumerable<UserDTO>>("api/users") ?? new List<UserDTO>();
         }
         catch (Exception ex)
         {
@@ -64,11 +65,12 @@ public class HttpUserService : IUserService
         }
     }
 
+
     public async Task UpdateUserAsync(int id, UpdateUserDTO request)
     {
         try
         {
-            var response = await client.PutAsJsonAsync($"users/{id}", request);
+            var response = await _client.PutAsJsonAsync($"api/users/{id}", request);
             response.EnsureSuccessStatusCode();
         }
         catch (Exception ex)
@@ -82,7 +84,7 @@ public class HttpUserService : IUserService
     {
         try
         {
-            var response = await client.DeleteAsync($"users/{id}");
+            var response = await _client.DeleteAsync($"api/users/{id}");
             response.EnsureSuccessStatusCode();
         }
         catch (Exception ex)

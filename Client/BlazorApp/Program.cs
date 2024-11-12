@@ -7,11 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddScoped(_ => new HttpClient
+builder.Services.AddScoped(sp => new HttpClient
     {
-        BaseAddress = new Uri("https://localhost:5177")
+        BaseAddress = new Uri("http://localhost:5076/")
     }
-);
+); // HttpClient skal pege på APIéns port
 
 // Registrer de nødvendige services
 builder.Services.AddScoped<IUserService, HttpUserService>();
@@ -28,7 +28,6 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 app.UseAntiforgery();

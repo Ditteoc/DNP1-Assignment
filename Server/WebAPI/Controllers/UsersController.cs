@@ -6,7 +6,7 @@ using RepositoryContracts;
 namespace WebAPI.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/users")]
 public class UsersController : ControllerBase
 {
     private readonly IRepository<User> _userRepository;
@@ -40,21 +40,28 @@ public class UsersController : ControllerBase
             {
                 return Conflict(new { error = "User already exists" });
             }
+            
+            // Log inputdata for at sikre, at den modtager de korrekte værdier
+            Console.WriteLine($"Adding user with Username: {requestUser.UserName}, Name: {requestUser.Name}, Email: {requestUser.Email}");
 
-            // Opret ny bruger entitet
+            // Opret ny bruger entitet med de attributter den skal kunne sende til endpoint i httpUserService i Blazor (DTO)
             var user = new User
             {
                 UserName = requestUser.UserName,
+                Name = requestUser.Name,
+                Email = requestUser.Email,
                 Password = requestUser.Password // I en reel app skal adgangskoden hashes
             };
 
             var createdUser = await _userRepository.AddAsync(user);
 
-            // Returner som UserDTO
+            // Returner som UserDTO - husk id 
             var dto = new UserDTO
             {
                 Id = createdUser.Id,
-                Username = createdUser.UserName
+                Username = createdUser.UserName,
+                Name = createdUser.Name,
+                Email = createdUser.Email
             };
 
             return CreatedAtAction(nameof(GetUser), new { id = dto.Id }, dto);
@@ -103,7 +110,9 @@ public class UsersController : ControllerBase
             var usersDto = users.Select(user => new UserDTO
             {
                 Id = user.Id,
-                Username = user.UserName
+                Username = user.UserName,
+                Name = user.Name,    // Tilføj Name
+                Email = user.Email   // Tilføj Email
             }).ToList();
 
             return Ok(usersDto);
@@ -114,6 +123,7 @@ public class UsersController : ControllerBase
             return StatusCode(500, "An error occurred while retrieving users.");
         }
     }
+
 
     // Opdater en eksisterende bruger
     [HttpPut("{id}")]
@@ -150,23 +160,18 @@ public class UsersController : ControllerBase
     }
 
 // Slet en bruger baseret på en DeleteUserDTO
-    [HttpDelete]
-    public async Task<IActionResult> DeleteUser([FromBody] DeleteUserDTO deleteUserDto)
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteUser(int id)
     {
-        if (deleteUserDto == null || deleteUserDto.Id <= 0)
-        {
-            return BadRequest("Invalid user data. Please provide a valid user ID.");
-        }
-
         try
         {
-            var user = await _userRepository.GetSingleAsync(deleteUserDto.Id);
+            var user = await _userRepository.GetSingleAsync(id);
             if (user == null)
             {
                 return NotFound(new { error = "User not found" });
             }
 
-            await _userRepository.DeleteAsync(deleteUserDto.Id);
+            await _userRepository.DeleteAsync(id); // Brug id'et til at finde og slette brugeren
             return NoContent();
         }
         catch (Exception e)

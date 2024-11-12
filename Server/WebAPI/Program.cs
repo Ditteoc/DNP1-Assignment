@@ -11,6 +11,17 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Configure CORS to allow requests from any origin (for development purposes)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins", builder =>
+    {
+        builder.AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddScoped<IRepository<User>>(provider => 
     new FileRepository<User>("users.json", u => u.Id, (u, id) => u.Id = id));
 
@@ -22,6 +33,9 @@ builder.Services.AddScoped<IRepository<Comment>>(provider =>
 
 var app = builder.Build();
 
+// Enable CORS for all origins
+app.UseCors("AllowAllOrigins");
+
 app.MapControllers();
 
 // Configure the HTTP request pipeline.
@@ -31,6 +45,5 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 
 app.Run();

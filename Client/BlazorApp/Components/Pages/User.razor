@@ -18,13 +18,37 @@ else
     <ul>
         @foreach (var user in users)
         {
-            <li>@user.Name (@user.Email)</li> <!-- Tilpas felter efter DTO'ens struktur -->
+            <li>
+                @user.Username - @user.Name (@user.Email)
+                <button @onclick="() => UpdateUser(user.Id)">Update</button>
+                <button @onclick="() => DeleteUser(user.Id)">Delete</button>
+            </li>
         }
     </ul>
 }
 
+<h4>Add New User</h4>
+<div>
+    <label>Username:</label>
+    <input @bind="newUser.UserName" placeholder="Enter username" />
+</div>
+<div>
+    <label>Name:</label>
+    <input @bind="newUser.Name" placeholder="Enter name" />
+</div>
+<div>
+    <label>Email:</label>
+    <input @bind="newUser.Email" placeholder="Enter email" type="email" />
+</div>
+<div>
+    <label>Password:</label>
+    <input @bind="newUser.Password" placeholder="Enter password" type="password" />
+</div>
+<button @onclick="AddUser">Add User</button>
+
 @code {
     private IEnumerable<UserDTO> users = Array.Empty<UserDTO>();
+    private CreateUserDTO newUser = new CreateUserDTO(); // Holder input til ny bruger
 
     protected override async Task OnInitializedAsync()
     {
@@ -35,6 +59,64 @@ else
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error fetching users: {ex.Message}");
+        }
+    }
+    
+    private async Task AddUser()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newUser.UserName) || string.IsNullOrWhiteSpace(newUser.Name) ||
+                string.IsNullOrWhiteSpace(newUser.Email) || string.IsNullOrWhiteSpace(newUser.Password))
+            {
+                Console.Error.WriteLine("All fields are required.");
+                return;
+            }
+
+            await UserService.AddUserAsync(newUser);
+            users = await UserService.GetUsersAsync();
+
+            // Ryd inputfelter efter tilføjelse
+            newUser = new CreateUserDTO();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error adding user: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateUser(int id)
+    {
+        try
+        {
+            var updateUser = new UpdateUserDTO
+            {
+                Id = id,
+                Username = "UpdatedUsername",
+                Name = "Updated Name",
+                Email = "updated@example.com",
+                Password = "UpdatedPassword"
+            };
+
+            await UserService.UpdateUserAsync(id, updateUser);
+            users = await UserService.GetUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error updating user with ID {id}: {ex.Message}");
+        }
+    }
+    
+    private async Task DeleteUser(int id)
+    {
+        try
+        {
+            await UserService.DeleteUserAsync(id);
+            users = await UserService.GetUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error deleting user with ID {id}: {ex.Message}");
         }
     }
 }

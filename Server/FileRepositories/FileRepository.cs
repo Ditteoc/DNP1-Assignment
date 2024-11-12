@@ -30,13 +30,14 @@ namespace FileRepositories
         {
             try
             {
+                Console.WriteLine($"Loading data from: {_filePath}");
                 string json = await File.ReadAllTextAsync(_filePath);
-                entities = JsonSerializer.Deserialize<List<T>>(json);
+                entities = JsonSerializer.Deserialize<List<T>>(json) ?? new List<T>();
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error loading data from: {_filePath}: {e.Message}");
-                entities = new List<T>(); // why a new list?
+                Console.WriteLine($"Error loading data from {_filePath}: {e.Message}");
+                entities = new List<T>();
             }
         }
 
@@ -46,11 +47,10 @@ namespace FileRepositories
             {
                 string json = JsonSerializer.Serialize(entities);
                 await File.WriteAllTextAsync(_filePath, json);
-
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error saving data to: {_filePath}: {e.Message}");
+                Console.WriteLine($"Error saving data to {_filePath}: {e.Message}");
             }
         }
         
@@ -65,7 +65,7 @@ namespace FileRepositories
 
         public async Task UpdateAsync(T entity)
         {
-            int entityId = _getId( entity);
+            int entityId = _getId(entity);
             var existingEntity = entities.SingleOrDefault(e => _getId(e) == entityId);
 
             if (existingEntity == null)
@@ -89,26 +89,17 @@ namespace FileRepositories
 
             entities.Remove(entityToRemove);
             await SaveEntitiesAsync();
-            
         }
 
         public Task<T> GetSingleAsync(int id)
         {
             var entity = entities.SingleOrDefault(e => _getId(e) == id);
-
-            if (entity == null)
-            {
-                return Task.FromException<T>(new InvalidOperationException($"Entity with ID '{id}' not found."));
-            }
-
-            return Task.FromResult(entity);
+            return Task.FromResult(entity); // Returner null hvis ikke fundet, uden exception
         }
 
-        public async Task<IEnumerable<T>> GetManyAsync()
+        public Task<IEnumerable<T>> GetManyAsync()
         {
-            await LoadEntitiesAsync();
-            return entities.AsEnumerable();
+            return Task.FromResult(entities.AsEnumerable());
         }
-        
     }
 }
