@@ -9,4 +9,5 @@ public interface IUserService
     Task<UserDTO> GetUserAsync(int id);
     Task<IEnumerable<UserDTO>> GetUsersAsync();
     Task DeleteUserAsync(int id);
+    Task<UserDTO> LoginAsync(LoginRequestDTO loginRequest);
 }

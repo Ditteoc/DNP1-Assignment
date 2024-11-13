@@ -1,0 +1,75 @@
+﻿@page "/login"
+@using BlazorApp.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavMgr
+
+<h3>This is where you login</h3>
+<AuthorizeView Context="authContext"> <!-- Ændring af context-navn til authContext -->
+    <NotAuthorized>
+        <EditForm Model="loginModel" OnValidSubmit="LoginAsync"> <!-- Brug loginModel som model -->
+            <DataAnnotationsValidator />
+
+            <div>
+                <label>User name:</label>
+                <InputText @bind-Value="loginModel.UserName" />
+            </div>
+            <div>
+                <label>Password:</label>
+                <InputText @bind-Value="loginModel.Password" type="password" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorLabel))
+            {
+            <p style="color: red">@errorLabel</p>
+            }
+
+            <button type="submit">Log in</button>
+        </EditForm>
+    </NotAuthorized>
+    <Authorized>
+        <h3>Welcome back, @authContext.User.Identity?.Name!</h3> <!-- Brug af authContext -->
+        <button @onclick="Logout">Logout</button>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+private LoginModel loginModel = new LoginModel();
+private string errorLabel = "";
+
+private async Task LoginAsync()
+{
+Console.WriteLine("Login button clicked"); // Debug statement
+
+errorLabel = "";
+if (AuthProvider is SimpleAuthProvider authProvider)
+{
+try
+{
+await authProvider.Login(loginModel.UserName, loginModel.Password);
+NavMgr.NavigateTo("/");
+}
+catch (Exception e)
+{
+Console.WriteLine($"Login error: {e.Message}");
+errorLabel = $"Error: {e.Message}";
+}
+}
+}
+
+private async Task Logout()
+{
+if (AuthProvider is SimpleAuthProvider authProvider)
+{
+await authProvider.Logout();
+NavMgr.NavigateTo("/");
+}
+}
+
+private class LoginModel
+{
+public string UserName { get; set; } = string.Empty;
+public string Password { get; set; } = string.Empty;
+}
+}

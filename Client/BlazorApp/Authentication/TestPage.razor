@@ -1,0 +1,16 @@
+﻿@page "/test"
+
+<h3>This is a test page</h3>
+<button @onclick="OnTestButtonClick">Test Button</button>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Console.WriteLine("TestPage initialized"); // Dette skal vises i konsollen
+    }
+
+    private void OnTestButtonClick()
+    {
+        Console.WriteLine("Test button clicked on TestPage");
+    }
+}

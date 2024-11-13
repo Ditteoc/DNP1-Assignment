@@ -93,4 +93,28 @@ public class HttpUserService : IUserService
             throw;
         }
     }
+    
+    public async Task<UserDTO?> LoginAsync(LoginRequestDTO loginRequest)
+    {
+        try
+        {
+            var response = await _client.PostAsJsonAsync("api/auth/login", loginRequest);
+            if (response.IsSuccessStatusCode)
+            {
+                var userDto = await response.Content.ReadFromJsonAsync<UserDTO>();
+                return userDto;
+            }
+            else
+            {
+                Console.Error.WriteLine("Login failed");
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error logging in: {ex.Message}");
+            return null;
+        }
+    }
+
 }
