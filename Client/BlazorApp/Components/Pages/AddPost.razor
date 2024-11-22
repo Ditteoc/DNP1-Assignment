@@ -1,0 +1,51 @@
+﻿@page "/add-post"
+@using BlazorApp.Services
+@using DTOs
+@inject IPostService PostService
+@inject NavigationManager Navigation
+
+<h3>Create New Post</h3>
+
+<EditForm Model="@newPost" OnValidSubmit="AddPostAsync">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Title:</label>
+        <InputText @bind-Value="newPost.Title" />
+    </div>
+    <div>
+        <label>Body:</label>
+        <InputTextArea @bind-Value="newPost.Body" />
+    </div>
+
+    <button type="submit">Create Post</button>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p style="color: red;">@errorMessage</p>
+}
+
+@code {
+    private CreatePostDTO newPost = new()
+    {
+        Title = string.Empty,  // Default value for Title
+        Body = string.Empty,   // Default value for Body
+        UserId = 1             // Assuming UserId = 1 for now
+    };
+    private string? errorMessage;
+
+    private async Task AddPostAsync()
+    {
+        try
+        {
+            await PostService.AddPostAsync(newPost);
+            Navigation.NavigateTo("/posts"); // Redirect after adding
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}

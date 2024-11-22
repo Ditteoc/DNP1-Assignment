@@ -1,0 +1,88 @@
+﻿@page "/posts/{postId:int}"
+@using BlazorApp.Services
+@using DTOs
+@inject IPostService PostService
+@inject ICommentService CommentService
+
+<h3>@post?.Title</h3>
+
+@if (post == null)
+{
+    <p>Loading post details...</p>
+}
+else
+{
+    <p><strong>Author:</strong> @post.UserName</p>
+    <p>@post.Body</p>
+
+    <h4>Comments</h4>
+    @if (post.Comments == null || !post.Comments.Any())
+    {
+        <p>No comments yet.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var comment in post.Comments)
+            {
+                <li>@comment.Body by @comment.UserName</li>
+            }
+        </ul>
+    }
+
+    <h4>Add a Comment</h4>
+    <EditForm Model="@newComment" OnValidSubmit="AddCommentAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div>
+            <InputTextArea @bind-Value="newComment.Body" />
+        </div>
+        <button type="submit">Add Comment</button>
+    </EditForm>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p style="color: red;">@errorMessage</p>
+}
+
+@code {
+    [Parameter] public int postId { get; set; }
+
+    private PostDTO? post;
+    private CreateCommentDTO newComment = new()
+    {
+        PostId = 0,    // Will be set dynamically
+        UserId = 1,    // Replace with the actual logged-in user's ID
+        Body = string.Empty  // Default value for the comment body
+    };
+
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            post = await PostService.GetPostAsync(postId);
+            newComment.PostId = postId; // Set PostId for the new comment
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task AddCommentAsync()
+    {
+        try
+        {
+            await CommentService.AddCommentAsync(newComment);
+            post = await PostService.GetPostAsync(postId);
+            newComment.Body = string.Empty; // Reset the form
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}

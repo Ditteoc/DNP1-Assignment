@@ -43,16 +43,19 @@ public class HttpPostService : IPostService
     // Henter alle indlæg
     public async Task<IEnumerable<PostDTO>> GetPostsAsync()
     {
-        HttpResponseMessage reponse = await client.GetAsync("posts");
-        string responseString = await reponse.Content.ReadAsStringAsync();
+        HttpResponseMessage response = await client.GetAsync("posts");
+        string responseString = await response.Content.ReadAsStringAsync();
 
-        if (!reponse.IsSuccessStatusCode)
+        Console.WriteLine($"API Response: {responseString}"); // Log the raw JSON response
+
+        if (!response.IsSuccessStatusCode)
         {
             throw new Exception(responseString);
         }
-        
+
         return JsonSerializer.Deserialize<IEnumerable<PostDTO>>(responseString, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
     }
+
 
     // Opdaterer et eksisterende indlæg
     public async Task UpdatePostAsync(int id, UpdatePostDTO request)
@@ -74,6 +77,16 @@ public class HttpPostService : IPostService
         if (!response.IsSuccessStatusCode)
         {
             throw new Exception(responseString);
+        }
+    }
+
+    public async Task AddPostAsync(CreatePostDTO post)
+    {
+        var response = await client.PostAsJsonAsync("posts", post);
+        if (!response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Failed to add post: {content}");
         }
     }
 }

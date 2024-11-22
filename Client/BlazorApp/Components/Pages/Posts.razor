@@ -1,0 +1,49 @@
+﻿@page "/posts"
+@using BlazorApp.Services
+@inject IPostService PostService
+@inject NavigationManager Navigation
+
+<h3>Posts</h3>
+
+@if (posts == null)
+{
+    <p>Loading posts...</p>
+}
+else if (!posts.Any())
+{
+    <p>No posts available.</p>
+}
+else
+{
+    <ul>
+        @foreach (var post in posts)
+        {
+            <li>
+                <a @onclick="() => NavigateToPost(post.Id)">
+                    <strong>@post.Title</strong> by @post.UserName
+                </a>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<PostDTO>? posts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            posts = (await PostService.GetPostsAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading posts: {ex.Message}");
+        }
+    }
+
+    private void NavigateToPost(int postId)
+    {
+        Navigation.NavigateTo($"/posts/{postId}");
+    }
+}

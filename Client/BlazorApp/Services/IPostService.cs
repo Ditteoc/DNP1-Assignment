@@ -9,4 +9,5 @@ public interface IPostService
     Task<IEnumerable<PostDTO>> GetPostsAsync();
     Task UpdatePostAsync(int id, UpdatePostDTO request);
     Task DeletePostAsync(int id);
+    Task AddPostAsync(CreatePostDTO post);
 }

@@ -1,21 +1,19 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using RepositoryContracts;
+﻿using DTOs;
 using Entities;
-using DTOs;
+using Microsoft.AspNetCore.Mvc;
+using RepositoryContracts;
+
+namespace WebAPI.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class PostsController : ControllerBase
+public class PostsController(
+    IRepository<User> userRepository,
+    IRepository<Post> postRepository,
+    IRepository<Comment> commentRepository)
+    : ControllerBase
 {
-    private readonly IRepository<User> _userRepository;
-    private readonly IRepository<Post> _postRepository;
-
-    public PostsController(IRepository<User> userRepository, IRepository<Post> postRepository)
-    {
-        _userRepository = userRepository;
-        _postRepository = postRepository;
-    }
-
+    
     // Opret en ny post
     [HttpPost]
     public async Task<IActionResult> CreatePost([FromBody] CreatePostDTO requestPost)
@@ -26,7 +24,7 @@ public class PostsController : ControllerBase
         }
 
         // Check, om brugeren eksisterer
-        var user = await _userRepository.GetSingleAsync(requestPost.UserId);
+        var user = await userRepository.GetSingleAsync(requestPost.UserId);
         if (user == null)
         {
             return NotFound($"User {requestPost.UserId} not found");
@@ -40,7 +38,7 @@ public class PostsController : ControllerBase
             UserId = requestPost.UserId
         };
 
-        var createdPost = await _postRepository.AddAsync(newPost);
+        var createdPost = await postRepository.AddAsync(newPost);
 
         // Opret et PostDTO objekt til at returnere den oprettede post
         var postDto = new PostDTO
@@ -59,7 +57,7 @@ public class PostsController : ControllerBase
     [HttpGet("search")]
     public async Task<IActionResult> GetManyPosts(string? title, int? userId, string? userName)
     {
-        var posts = await _postRepository.GetManyAsync();
+        var posts = await postRepository.GetManyAsync();
 
         if (!string.IsNullOrWhiteSpace(title))
         {
@@ -73,7 +71,7 @@ public class PostsController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(userName))
         {
-            var user = (await _userRepository.GetManyAsync()).FirstOrDefault(u => u.UserName == userName);
+            var user = (await userRepository.GetManyAsync()).FirstOrDefault(u => u.UserName == userName);
             if (user != null)
             {
                 posts = posts.Where(p => p.UserId == user.Id);
@@ -88,7 +86,7 @@ public class PostsController : ControllerBase
         var postDtos = new List<PostDTO>();
         foreach (var post in posts)
         {
-            var user = await _userRepository.GetSingleAsync(post.UserId);
+            var user = await userRepository.GetSingleAsync(post.UserId);
 
             var postDto = new PostDTO
             {
@@ -109,26 +107,41 @@ public class PostsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPostById(int id)
     {
-        var post = await _postRepository.GetSingleAsync(id);
+        // Fetch the post
+        var post = await postRepository.GetSingleAsync(id);
         if (post == null)
         {
             return NotFound();
         }
 
-        var user = await _userRepository.GetSingleAsync(post.UserId);
+        // Fetch comments from the comments.json file
+        var comments = await commentRepository.GetManyAsync();
+        var postComments = comments.Where(c => c.PostId == id).Select(comment =>
+        {
+            var user = userRepository.GetSingleAsync(comment.UserId).Result;
+            return new CommentDTO
+            {
+                Id = comment.Id,
+                Body = comment.Body,
+                PostId = comment.PostId,
+                UserName = user?.UserName ?? "Unknown"
+            };
+        }).ToList();
 
-        // Opret PostDTO og returner det
+        // Map the post to PostDTO
+        var user = await userRepository.GetSingleAsync(post.UserId);
         var postDto = new PostDTO
         {
             Id = post.Id,
             Title = post.Title,
             Body = post.Body,
             UserName = user?.UserName ?? "Unknown",
-            Comments = new List<CommentDTO>()  // Ingen kommentarer i dette tilfælde
+            Comments = postComments // Associate comments with the post
         };
 
         return Ok(postDto);
     }
+
     
 
     // PUT: api/posts/{id} - Opdatering af post
@@ -140,7 +153,7 @@ public class PostsController : ControllerBase
             return BadRequest();
         }
 
-        var post = await _postRepository.GetSingleAsync(id);
+        var post = await postRepository.GetSingleAsync(id);
         if (post == null)
         {
             return NotFound();
@@ -152,7 +165,7 @@ public class PostsController : ControllerBase
 
         try
         {
-            await _postRepository.UpdateAsync(post);
+            await postRepository.UpdateAsync(post);
             return NoContent();
         }
         catch (InvalidOperationException)
@@ -167,12 +180,38 @@ public class PostsController : ControllerBase
     {
         try
         {
-            await _postRepository.DeleteAsync(id);
+            await postRepository.DeleteAsync(id);
             return NoContent();
         }
         catch (InvalidOperationException)
         {
             return NotFound();
         }
+    }
+    
+    [HttpGet]
+    public async Task<IActionResult> GetAllPosts()
+    {
+        var posts = await postRepository.GetManyAsync();
+
+        // Convert to DTOs
+        var postDtos = new List<PostDTO>();
+        foreach (var post in posts)
+        {
+            var user = await userRepository.GetSingleAsync(post.UserId);
+
+            var postDto = new PostDTO
+            {
+                Id = post.Id,
+                Title = post.Title,
+                Body = post.Body,
+                UserName = user?.UserName ?? "Unknown",
+                Comments = new List<CommentDTO>() // Return empty comments for now
+            };
+
+            postDtos.Add(postDto);
+        }
+
+        return Ok(postDtos);
     }
 }
