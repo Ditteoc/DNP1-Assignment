@@ -61,13 +61,8 @@ public class CreateCommentView
         }
 
         // Create the comment object
-        Comment newComment = new Comment
-        {
-            PostId = postId,
-            UserId = userId,
-            Body = commentBody
-        };
-
+        Comment newComment = new Comment(0, commentBody, postId, post, userId, user);
+        
         // Add the comment to the repository
         await _commentRepository.AddAsync(newComment);
         Console.WriteLine("Comment added successfully.");

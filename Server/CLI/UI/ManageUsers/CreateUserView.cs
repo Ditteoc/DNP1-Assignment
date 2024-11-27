@@ -1,7 +1,6 @@
 ﻿using Entities;
 using RepositoryContracts;
 
-
 namespace CLI.UI.ManageUsers;
 
 public class CreateUserView
@@ -20,11 +19,10 @@ public class CreateUserView
         string userName = Console.ReadLine();
 
         var users = await _userRepository.GetManyAsync() ?? Enumerable.Empty<User>();
-        var existingUser = users.FirstOrDefault(u => u.UserName == userName);
+        var existingUser = users.FirstOrDefault(u => u.Username == userName);
         if (existingUser != null)
         {
-            Console.WriteLine(
-                "Username already exists. Please enter a different username.");
+            Console.WriteLine("Username already exists. Please enter a different username.");
             return;
         }
 
@@ -33,7 +31,23 @@ public class CreateUserView
             Console.WriteLine("Username cannot be empty.");
             return;
         }
-        
+
+        Console.WriteLine("Enter full name: ");
+        string name = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            Console.WriteLine("Name cannot be empty.");
+            return;
+        }
+
+        Console.WriteLine("Enter email: ");
+        string email = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            Console.WriteLine("Email cannot be empty.");
+            return;
+        }
+
         Console.WriteLine("Enter password: ");
         string password = Console.ReadLine();
         if (string.IsNullOrWhiteSpace(password))
@@ -42,9 +56,10 @@ public class CreateUserView
             return;
         }
 
-        User user = new User { UserName = userName, Password = password };
+        // Brug korrekt konstruktor til at oprette en ny User
+        User user = new User(0, userName, name, email, password);
 
         await _userRepository.AddAsync(user);
-        Console.WriteLine("User created successfully");
+        Console.WriteLine("User created successfully.");
     }
 }

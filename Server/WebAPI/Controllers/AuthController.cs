@@ -21,7 +21,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequestDTO loginRequest)
     {
         var users = await _userRepository.GetManyAsync();
-        var user = users.FirstOrDefault(u => u.UserName == loginRequest.Username);
+        var user = users.FirstOrDefault(u => u.Username == loginRequest.Username);
 
         if (user == null)
         {
@@ -36,7 +36,7 @@ public class AuthController : ControllerBase
         var userDTO = new UserDTO
         {
             Id = user.Id,
-            Username = user.UserName,
+            Username = user.Username,
             Name = user.Name,
             Email = user.Email
         };

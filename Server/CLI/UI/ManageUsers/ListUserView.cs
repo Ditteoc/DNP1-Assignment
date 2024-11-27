@@ -21,7 +21,7 @@ public class ListUserView
             Console.WriteLine("\nListing users: ");
             foreach (var user in users)
             {
-                Console.WriteLine($"ID: {user.Id}, Username: {user.UserName}");
+                Console.WriteLine($"ID: {user.Id}, Username: {user.Username}");
             }
         }
         else

@@ -34,24 +34,24 @@ public class UsersController : ControllerBase
 
             // Tjek om brugernavn allerede findes
             var users = await _userRepository.GetManyAsync();
-            var existingUser = users.FirstOrDefault(u => u.UserName == requestUser.UserName);
+            var existingUser = users.FirstOrDefault(u => u.Username == requestUser.UserName);
 
             if (existingUser != null)
             {
                 return Conflict(new { error = "User already exists" });
             }
-            
-            // Log inputdata for at sikre, at den modtager de korrekte værdier
+
+            // Log inputdata
             Console.WriteLine($"Adding user with Username: {requestUser.UserName}, Name: {requestUser.Name}, Email: {requestUser.Email}");
 
-            // Opret ny bruger entitet med de attributter den skal kunne sende til endpoint i httpUserService i Blazor (DTO)
-            var user = new User
-            {
-                UserName = requestUser.UserName,
-                Name = requestUser.Name,
-                Email = requestUser.Email,
-                Password = requestUser.Password // I en reel app skal adgangskoden hashes
-            };
+            // Opret ny bruger ved at bruge den parameteriserede konstruktor
+            var user = new User(
+                id: 0, // ID håndteres af databasen
+                username: requestUser.UserName,
+                name: requestUser.Name,
+                email: requestUser.Email,
+                password: requestUser.Password // Adgangskoden skal hashes i produktion
+            );
 
             var createdUser = await _userRepository.AddAsync(user);
 
@@ -59,7 +59,7 @@ public class UsersController : ControllerBase
             var dto = new UserDTO
             {
                 Id = createdUser.Id,
-                Username = createdUser.UserName,
+                Username = createdUser.Username,
                 Name = createdUser.Name,
                 Email = createdUser.Email
             };
@@ -87,7 +87,9 @@ public class UsersController : ControllerBase
         var userDto = new UserDTO
         {
             Id = user.Id,
-            Username = user.UserName
+            Username = user.Username,
+            Name = user.Name,
+            Email = user.Email
         };
 
         return Ok(userDto);
@@ -104,15 +106,15 @@ public class UsersController : ControllerBase
             // Filtrer brugere baseret på søgeparameter, hvis den er angivet
             if (!string.IsNullOrWhiteSpace(search))
             {
-                users = users.Where(u => u.UserName.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+                users = users.Where(u => u.Username.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
             var usersDto = users.Select(user => new UserDTO
             {
                 Id = user.Id,
-                Username = user.UserName,
-                Name = user.Name,    // Tilføj Name
-                Email = user.Email   // Tilføj Email
+                Username = user.Username,
+                Name = user.Name,
+                Email = user.Email
             }).ToList();
 
             return Ok(usersDto);
@@ -124,18 +126,17 @@ public class UsersController : ControllerBase
         }
     }
 
-
     // Opdater en eksisterende bruger
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDTO userDto)
     {
-        if (userDto == null || id != userDto.Id)
-        {
-            return BadRequest("User id is invalid or data is missing");
-        }
-
         try
         {
+            if (userDto == null || id != userDto.Id)
+            {
+                return BadRequest("User id is invalid or data is missing");
+            }
+
             var existingUser = await _userRepository.GetSingleAsync(id);
             if (existingUser == null)
             {
@@ -143,10 +144,12 @@ public class UsersController : ControllerBase
             }
 
             // Opdater kun de nødvendige felter
-            existingUser.UserName = userDto.Username ?? existingUser.UserName;
+            existingUser.Username = userDto.Username ?? existingUser.Username;
+            existingUser.Name = userDto.Name ?? existingUser.Name;
+            existingUser.Email = userDto.Email ?? existingUser.Email;
             if (!string.IsNullOrWhiteSpace(userDto.Password))
             {
-                existingUser.Password = userDto.Password; // Adgangskode skal hashes
+                existingUser.Password = userDto.Password; // Adgangskoden skal hashes
             }
 
             await _userRepository.UpdateAsync(existingUser);
@@ -159,7 +162,7 @@ public class UsersController : ControllerBase
         }
     }
 
-// Slet en bruger baseret på en DeleteUserDTO
+    // Slet en bruger baseret på en DeleteUserDTO
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(int id)
     {
@@ -171,7 +174,7 @@ public class UsersController : ControllerBase
                 return NotFound(new { error = "User not found" });
             }
 
-            await _userRepository.DeleteAsync(id); // Brug id'et til at finde og slette brugeren
+            await _userRepository.DeleteAsync(id);
             return NoContent();
         }
         catch (Exception e)

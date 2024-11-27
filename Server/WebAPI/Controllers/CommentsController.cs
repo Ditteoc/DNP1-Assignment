@@ -26,132 +26,157 @@ public class CommentsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateComment([FromBody] CreateCommentDTO requestComment)
     {
-        if (requestComment == null)
+        try
         {
-            return BadRequest("Request body cannot be null");
+            if (requestComment == null || string.IsNullOrWhiteSpace(requestComment.Body))
+            {
+                return BadRequest("Comment body cannot be null or empty.");
+            }
+
+            // Tjek, om brugeren og posten eksisterer
+            var user = await _userRepository.GetSingleAsync(requestComment.UserId);
+            if (user == null)
+            {
+                return NotFound($"User with ID {requestComment.UserId} not found.");
+            }
+
+            var post = await _postRepository.GetSingleAsync(requestComment.PostId);
+            if (post == null)
+            {
+                return NotFound($"Post with ID {requestComment.PostId} not found.");
+            }
+
+            // Opret en ny kommentar
+            var newComment = new Comment(
+                id: 0, // ID håndteres normalt af databasen
+                body: requestComment.Body,
+                postId: requestComment.PostId,
+                post: post, // Post-objektet hentet fra databasen
+                userId: requestComment.UserId,
+                user: user // User-objektet hentet fra databasen
+            );
+
+            var createdComment = await _commentRepository.AddAsync(newComment);
+
+            // Returner den oprettede kommentar som DTO
+            var commentDto = new CommentDTO
+            {
+                Id = createdComment.Id,
+                Body = createdComment.Body,
+                UserName = user.Username,
+                PostId = createdComment.PostId
+            };
+
+            return CreatedAtAction(nameof(GetCommentById), new { id = commentDto.Id }, commentDto);
         }
-
-        // Tjek, om brugeren og posten eksisterer
-        var user = await _userRepository.GetSingleAsync(requestComment.UserId);
-        if (user == null)
+        catch (Exception ex)
         {
-            return NotFound($"User {requestComment.UserId} not found");
+            Console.WriteLine($"Error in CreateComment: {ex.Message}");
+            return StatusCode(500, "An error occurred while creating the comment.");
         }
-
-        var post = await _postRepository.GetSingleAsync(requestComment.PostId);
-        if (post == null)
-        {
-            return NotFound($"Post {requestComment.PostId} not found");
-        }
-
-        // Map CreateCommentDTO til en ny Comment entity
-        var newComment = new Comment
-        {
-            Body = requestComment.Body,
-            UserId = requestComment.UserId,
-            PostId = requestComment.PostId
-        };
-
-        var createdComment = await _commentRepository.AddAsync(newComment);
-
-        // Map Comment entity til CommentDTO og returner
-        var commentDto = new CommentDTO
-        {
-            Id = createdComment.Id,
-            Body = createdComment.Body,
-            UserName = user.UserName,  // Brugernavn fra bruger, der skrev kommentaren
-            PostId = createdComment.PostId
-        };
-
-        return CreatedAtAction(nameof(GetCommentById), new { id = commentDto.Id }, commentDto);
     }
-    
+
     // Get api/comments - Returner en liste af kommentarer
     [HttpGet]
-    public async Task<IActionResult> GetManyComments(int? postId, int? userId)
+    public async Task<IActionResult> GetManyComments([FromQuery] int? postId, [FromQuery] int? userId)
     {
-        var comments = await _commentRepository.GetManyAsync();
-
-        // Filtrer baseret på `postId` og `userId`
-        if (postId.HasValue)
+        try
         {
-            comments = comments.Where(c => c.PostId == postId.Value);
-        }
+            var comments = await _commentRepository.GetManyAsync();
 
-        if (userId.HasValue)
-        {
-            comments = comments.Where(c => c.UserId == userId.Value);
-        }
-
-        // Hent alle brugere én gang for at undgå gentagende opslag
-        var users = await _userRepository.GetManyAsync();
-
-        // Map Comment entity til CommentDTO
-        var commentDtos = comments.Select(comment =>
-        {
-            var user = users.FirstOrDefault(u => u.Id == comment.UserId);
-            return new CommentDTO
+            // Filtrer baseret på `postId` og `userId`
+            if (postId.HasValue)
             {
-                Id = comment.Id,
-                Body = comment.Body,
-                UserName = user?.UserName ?? "Unknown",
-                PostId = comment.PostId
-            };
-        }).ToList();
+                comments = comments.Where(c => c.PostId == postId.Value);
+            }
 
-        return Ok(commentDtos);
+            if (userId.HasValue)
+            {
+                comments = comments.Where(c => c.UserId == userId.Value);
+            }
+
+            // Map kommentarerne til DTO'er
+            var users = await _userRepository.GetManyAsync();
+            var commentDtos = comments.Select(comment =>
+            {
+                var user = users.FirstOrDefault(u => u.Id == comment.UserId);
+                return new CommentDTO
+                {
+                    Id = comment.Id,
+                    Body = comment.Body,
+                    UserName = user?.Username ?? "Unknown",
+                    PostId = comment.PostId
+                };
+            }).ToList();
+
+            return Ok(commentDtos);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetManyComments: {ex.Message}");
+            return StatusCode(500, "An error occurred while retrieving comments.");
+        }
     }
 
     // Get api/comments/{id} - Returner en enkelt kommentar
     [HttpGet("{id}")]
     public async Task<IActionResult> GetCommentById(int id)
     {
-        var comment = await _commentRepository.GetSingleAsync(id);
-        if (comment == null)
+        try
         {
-            return NotFound("Comment not found");
+            var comment = await _commentRepository.GetSingleAsync(id);
+            if (comment == null)
+            {
+                return NotFound("Comment not found.");
+            }
+
+            var user = await _userRepository.GetSingleAsync(comment.UserId);
+
+            // Returner kommentaren som DTO
+            var commentDto = new CommentDTO
+            {
+                Id = comment.Id,
+                Body = comment.Body,
+                UserName = user?.Username ?? "Unknown",
+                PostId = comment.PostId
+            };
+
+            return Ok(commentDto);
         }
-
-        var user = await _userRepository.GetSingleAsync(comment.UserId);
-
-        // Map Comment entity til CommentDTO
-        var commentDto = new CommentDTO
+        catch (Exception ex)
         {
-            Id = comment.Id,
-            Body = comment.Body,
-            UserName = user?.UserName ?? "Unknown",
-            PostId = comment.PostId
-        };
-
-        return Ok(commentDto);
+            Console.WriteLine($"Error in GetCommentById: {ex.Message}");
+            return StatusCode(500, "An error occurred while retrieving the comment.");
+        }
     }
 
     // PUT: api/comments/{id} - Opdater en kommentar
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateComment(int id, [FromBody] CommentDTO commentDto)
+    public async Task<IActionResult> UpdateComment(int id, [FromBody] UpdateCommentDTO commentDto)
     {
-        if (commentDto == null || commentDto.Id != id)
-        {
-            return BadRequest("Invalid comment data or ID mismatch");
-        }
-
-        var comment = await _commentRepository.GetSingleAsync(id);
-        if (comment == null)
-        {
-            return NotFound("Comment not found");
-        }
-
-        // Opdater kommentarens indhold
-        comment.Body = commentDto.Body;
-
         try
         {
+            if (commentDto == null || commentDto.Id != id)
+            {
+                return BadRequest("Invalid comment data or ID mismatch.");
+            }
+
+            var comment = await _commentRepository.GetSingleAsync(id);
+            if (comment == null)
+            {
+                return NotFound("Comment not found.");
+            }
+
+            // Opdater kommentarens indhold
+            comment.Body = commentDto.Body;
+
             await _commentRepository.UpdateAsync(comment);
             return NoContent();
         }
-        catch (InvalidOperationException)
+        catch (Exception ex)
         {
-            return StatusCode(500, "An error occurred while updating the comment");
+            Console.WriteLine($"Error in UpdateComment: {ex.Message}");
+            return StatusCode(500, "An error occurred while updating the comment.");
         }
     }
 
@@ -161,12 +186,19 @@ public class CommentsController : ControllerBase
     {
         try
         {
+            var comment = await _commentRepository.GetSingleAsync(id);
+            if (comment == null)
+            {
+                return NotFound("Comment not found.");
+            }
+
             await _commentRepository.DeleteAsync(id);
             return NoContent();
         }
-        catch (InvalidOperationException)
+        catch (Exception ex)
         {
-            return NotFound("Comment not found");
+            Console.WriteLine($"Error in DeleteComment: {ex.Message}");
+            return StatusCode(500, "An error occurred while deleting the comment.");
         }
     }
 }

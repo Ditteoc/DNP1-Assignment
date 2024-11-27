@@ -32,7 +32,7 @@ public class ListCommentView
                 {
                     var user =
                         await _userRepository.GetSingleAsync(comment.UserId);
-                    string userInfo = user != null ? $"User: {user.UserName}"
+                    string userInfo = user != null ? $"User: {user.Username}"
                         : "User: Unknown";
                     Console.WriteLine(
                         $"ID: {comment.Id}, {userInfo}, Content: {comment.Body}");

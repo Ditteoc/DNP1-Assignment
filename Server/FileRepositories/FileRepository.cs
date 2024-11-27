@@ -6,17 +6,16 @@ namespace FileRepositories
 {
     public class FileRepository<T> : IRepository<T> where T : class
     {
-        protected List<T> entities = new List<T>();
+        protected List<T> _entities = new List<T>();
 
         private readonly string _filePath;
         private readonly Func<T, int> _getId;
-        private readonly Action<T, int> _setId;
+      
 
-        public FileRepository(string filePath, Func<T, int> getId, Action<T, int> setId)
+        public FileRepository(string filePath, Func<T, int> getId)
         {
             _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath)); 
             _getId = getId ?? throw new ArgumentNullException(nameof(getId));
-            _setId = setId ?? throw new ArgumentNullException(nameof(setId));
 
             if (!File.Exists(_filePath))
             {
@@ -32,12 +31,12 @@ namespace FileRepositories
             {
                 Console.WriteLine($"Loading data from: {_filePath}");
                 string json = await File.ReadAllTextAsync(_filePath);
-                entities = JsonSerializer.Deserialize<List<T>>(json) ?? new List<T>();
+                _entities = JsonSerializer.Deserialize<List<T>>(json) ?? new List<T>();
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error loading data from {_filePath}: {e.Message}");
-                entities = new List<T>();
+                _entities = new List<T>();
             }
         }
 
@@ -45,7 +44,7 @@ namespace FileRepositories
         {
             try
             {
-                string json = JsonSerializer.Serialize(entities);
+                string json = JsonSerializer.Serialize(_entities);
                 await File.WriteAllTextAsync(_filePath, json);
             }
             catch (Exception e)
@@ -56,9 +55,18 @@ namespace FileRepositories
         
         public async Task<T> AddAsync(T entity)
         {
-            int newId = entities.Any() ? entities.Max(e => _getId(e)) + 1 : 1;
-            _setId(entity, newId);
-            entities.Add(entity);
+            int newId = _entities.Any() ? _entities.Max(e => _getId(e)) + 1 : 1;
+
+            // Reflektion bruges til at sætte `Id` automatisk
+            var idProperty = typeof(T).GetProperty("Id");
+            if (idProperty == null || !idProperty.CanWrite)
+            {
+                throw new InvalidOperationException("Entity must have a writable Id property.");
+            }
+
+            idProperty.SetValue(entity, newId);
+
+            _entities.Add(entity);
             await SaveEntitiesAsync();
             return entity;
         }
@@ -66,40 +74,40 @@ namespace FileRepositories
         public async Task UpdateAsync(T entity)
         {
             int entityId = _getId(entity);
-            var existingEntity = entities.SingleOrDefault(e => _getId(e) == entityId);
+            var existingEntity = _entities.SingleOrDefault(e => _getId(e) == entityId);
 
             if (existingEntity == null)
             {
                 throw new InvalidOperationException($"Entity with ID '{entityId}' not found");
             }
 
-            entities.Remove(existingEntity);
-            entities.Add(entity);
+            _entities.Remove(existingEntity);
+            _entities.Add(entity);
             await SaveEntitiesAsync();
         }
 
         public async Task DeleteAsync(int id)
         {
-            var entityToRemove = entities.SingleOrDefault(e => _getId(e) == id);
+            var entityToRemove = _entities.SingleOrDefault(e => _getId(e) == id);
 
             if (entityToRemove == null)
             {
                 throw new InvalidOperationException($"Entity with ID '{id}' not found");
             }
 
-            entities.Remove(entityToRemove);
+            _entities.Remove(entityToRemove);
             await SaveEntitiesAsync();
         }
 
         public Task<T> GetSingleAsync(int id)
         {
-            var entity = entities.SingleOrDefault(e => _getId(e) == id);
+            var entity = _entities.SingleOrDefault(e => _getId(e) == id);
             return Task.FromResult(entity); // Returner null hvis ikke fundet, uden exception
         }
 
         public Task<IEnumerable<T>> GetManyAsync()
         {
-            return Task.FromResult(entities.AsEnumerable());
+            return Task.FromResult(_entities.AsEnumerable());
         }
     }
 }

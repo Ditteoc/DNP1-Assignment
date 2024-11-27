@@ -1,6 +1,8 @@
 using Entities;
 using FileRepositories;
+using Microsoft.EntityFrameworkCore;
 using RepositoryContracts;
+using EfcRepositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,13 +25,17 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddScoped<IRepository<User>>(provider => 
-    new FileRepository<User>("users.json", u => u.Id, (u, id) => u.Id = id));
+    new FileRepository<User>("users.json", u => u.Id));
 
 builder.Services.AddScoped<IRepository<Post>>(provider => 
-    new FileRepository<Post>("posts.json", p => p.Id, (p, id) => p.Id = id));
+    new FileRepository<Post>("posts.json", p => p.Id));
 
 builder.Services.AddScoped<IRepository<Comment>>(provider => 
-    new FileRepository<Comment>("comments.json", c => c.Id, (c, id) => c.Id = id));
+    new FileRepository<Comment>("comments.json", c => c.Id));
+
+builder.Services.AddDbContext<EfcRepositories.AppContext>(options =>
+    options.UseSqlite("Data Source=C:\\Users\\ditte\\OneDrive - ViaUC\\3 Semester\\DNP 1\\app.db"));
+
 
 var app = builder.Build();
 

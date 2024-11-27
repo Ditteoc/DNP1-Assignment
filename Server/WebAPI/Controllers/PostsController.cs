@@ -6,212 +6,153 @@ using RepositoryContracts;
 namespace WebAPI.Controllers;
 
 [ApiController]
-[Route("[controller]")]
-public class PostsController(
-    IRepository<User> userRepository,
-    IRepository<Post> postRepository,
-    IRepository<Comment> commentRepository)
-    : ControllerBase
+[Route("api/posts")]
+public class PostsController : ControllerBase
 {
-    
+    private readonly IRepository<User> _userRepository;
+    private readonly IRepository<Post> _postRepository;
+    private readonly IRepository<Comment> _commentRepository;
+
+    public PostsController(
+        IRepository<User> userRepository,
+        IRepository<Post> postRepository,
+        IRepository<Comment> commentRepository)
+    {
+        _userRepository = userRepository;
+        _postRepository = postRepository;
+        _commentRepository = commentRepository;
+    }
+
     // Opret en ny post
     [HttpPost]
     public async Task<IActionResult> CreatePost([FromBody] CreatePostDTO requestPost)
     {
-        if (requestPost == null)
+        try
         {
-            return BadRequest();
-        }
-
-        // Check, om brugeren eksisterer
-        var user = await userRepository.GetSingleAsync(requestPost.UserId);
-        if (user == null)
-        {
-            return NotFound($"User {requestPost.UserId} not found");
-        }
-
-        // Map CreatePostDTO til en ny Post entity
-        var newPost = new Post
-        {
-            Title = requestPost.Title,
-            Body = requestPost.Body,
-            UserId = requestPost.UserId
-        };
-
-        var createdPost = await postRepository.AddAsync(newPost);
-
-        // Opret et PostDTO objekt til at returnere den oprettede post
-        var postDto = new PostDTO
-        {
-            Id = createdPost.Id,
-            Title = createdPost.Title,
-            Body = createdPost.Body,
-            UserName = user.UserName,
-            Comments = new List<CommentDTO>()  // Tom liste ved oprettelse
-        };
-
-        return CreatedAtAction(nameof(GetPostById), new { id = postDto.Id }, postDto);
-    }
-    
-    // Get api/posts - Returner en liste af PostDTO'er
-    [HttpGet("search")]
-    public async Task<IActionResult> GetManyPosts(string? title, int? userId, string? userName)
-    {
-        var posts = await postRepository.GetManyAsync();
-
-        if (!string.IsNullOrWhiteSpace(title))
-        {
-            posts = posts.Where(p => p.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (userId.HasValue)
-        {
-            posts = posts.Where(p => p.UserId == userId.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(userName))
-        {
-            var user = (await userRepository.GetManyAsync()).FirstOrDefault(u => u.UserName == userName);
-            if (user != null)
+            if (requestPost == null)
             {
-                posts = posts.Where(p => p.UserId == user.Id);
+                return BadRequest("Invalid post data.");
             }
-            else
-            {
-                return NotFound($"User '{userName}' not found");
-            }
-        }
 
-        // Hent data og konverter til PostDTO
-        var postDtos = new List<PostDTO>();
-        foreach (var post in posts)
-        {
-            var user = await userRepository.GetSingleAsync(post.UserId);
+            var user = await _userRepository.GetSingleAsync(requestPost.UserId);
+            if (user == null)
+            {
+                return NotFound($"User with ID {requestPost.UserId} not found.");
+            }
+
+            // Opret ny Post med parameteriseret konstruktor
+            var newPost = new Post(0, requestPost.Title, requestPost.Body, requestPost.UserId);
+            var createdPost = await _postRepository.AddAsync(newPost);
 
             var postDto = new PostDTO
             {
-                Id = post.Id,
-                Title = post.Title,
-                Body = post.Body,
-                UserName = user?.UserName ?? "Unknown",
-                Comments = new List<CommentDTO>()  // Som tom liste
+                Id = createdPost.Id,
+                Title = createdPost.Title,
+                Body = createdPost.Body,
+                UserName = user.Username,
+                Comments = new List<CommentDTO>() // Tom liste ved oprettelse
             };
 
-            postDtos.Add(postDto);
+            return CreatedAtAction(nameof(GetPostById), new { id = postDto.Id }, postDto);
         }
-
-        return Ok(postDtos);
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in CreatePost: {ex.Message}");
+            return StatusCode(500, "An error occurred while creating the post.");
+        }
     }
 
-    // Get api/posts/{id} - Returner en enkelt PostDTO
+    // Hent en enkelt post
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPostById(int id)
     {
-        // Fetch the post
-        var post = await postRepository.GetSingleAsync(id);
-        if (post == null)
+        try
         {
-            return NotFound();
-        }
-
-        // Fetch comments from the comments.json file
-        var comments = await commentRepository.GetManyAsync();
-        var postComments = comments.Where(c => c.PostId == id).Select(comment =>
-        {
-            var user = userRepository.GetSingleAsync(comment.UserId).Result;
-            return new CommentDTO
+            var post = await _postRepository.GetSingleAsync(id);
+            if (post == null)
             {
-                Id = comment.Id,
-                Body = comment.Body,
-                PostId = comment.PostId,
-                UserName = user?.UserName ?? "Unknown"
-            };
-        }).ToList();
+                return NotFound("Post not found.");
+            }
 
-        // Map the post to PostDTO
-        var user = await userRepository.GetSingleAsync(post.UserId);
-        var postDto = new PostDTO
-        {
-            Id = post.Id,
-            Title = post.Title,
-            Body = post.Body,
-            UserName = user?.UserName ?? "Unknown",
-            Comments = postComments // Associate comments with the post
-        };
+            var user = await _userRepository.GetSingleAsync(post.UserId);
 
-        return Ok(postDto);
-    }
-
-    
-
-    // PUT: api/posts/{id} - Opdatering af post
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] PostDTO postDto)
-    {
-        if (postDto == null || postDto.Id != id)
-        {
-            return BadRequest();
-        }
-
-        var post = await postRepository.GetSingleAsync(id);
-        if (post == null)
-        {
-            return NotFound();
-        }
-
-        // Opdater post entiteten
-        post.Title = postDto.Title;
-        post.Body = postDto.Body;
-
-        try
-        {
-            await postRepository.UpdateAsync(post);
-            return NoContent();
-        }
-        catch (InvalidOperationException)
-        {
-            return NotFound();
-        }
-    }
-
-    // DELETE: api/posts/{id}
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        try
-        {
-            await postRepository.DeleteAsync(id);
-            return NoContent();
-        }
-        catch (InvalidOperationException)
-        {
-            return NotFound();
-        }
-    }
-    
-    [HttpGet]
-    public async Task<IActionResult> GetAllPosts()
-    {
-        var posts = await postRepository.GetManyAsync();
-
-        // Convert to DTOs
-        var postDtos = new List<PostDTO>();
-        foreach (var post in posts)
-        {
-            var user = await userRepository.GetSingleAsync(post.UserId);
+            var comments = (await _commentRepository.GetManyAsync())
+                .Where(c => c.PostId == id)
+                .Select(async c => new CommentDTO
+                {
+                    Id = c.Id,
+                    Body = c.Body,
+                    PostId = c.PostId,
+                    UserName = (await _userRepository.GetSingleAsync(c.UserId))?.Username ?? "Unknown"
+                }).Select(t => t.Result).ToList();
 
             var postDto = new PostDTO
             {
                 Id = post.Id,
                 Title = post.Title,
                 Body = post.Body,
-                UserName = user?.UserName ?? "Unknown",
-                Comments = new List<CommentDTO>() // Return empty comments for now
+                UserName = user?.Username ?? "Unknown",
+                Comments = comments
             };
 
-            postDtos.Add(postDto);
+            return Ok(postDto);
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetPostById: {ex.Message}");
+            return StatusCode(500, "An error occurred while retrieving the post.");
+        }
+    }
 
-        return Ok(postDtos);
+    // Opdater en post
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdatePost(int id, [FromBody] UpdatePostDTO postDto)
+    {
+        try
+        {
+            if (postDto == null || id != postDto.Id)
+            {
+                return BadRequest("Invalid post data.");
+            }
+
+            var post = await _postRepository.GetSingleAsync(id);
+            if (post == null)
+            {
+                return NotFound("Post not found.");
+            }
+
+            post.Title = postDto.Title;
+            post.Body = postDto.Body;
+
+            await _postRepository.UpdateAsync(post);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in UpdatePost: {ex.Message}");
+            return StatusCode(500, "An error occurred while updating the post.");
+        }
+    }
+
+    // Slet en post
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeletePost(int id)
+    {
+        try
+        {
+            var post = await _postRepository.GetSingleAsync(id);
+            if (post == null)
+            {
+                return NotFound($"Post with ID {id} not found.");
+            }
+
+            await _postRepository.DeleteAsync(id);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in DeletePost: {ex.Message}");
+            return StatusCode(500, "An error occurred while deleting the post.");
+        }
     }
 }

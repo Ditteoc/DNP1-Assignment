@@ -2,22 +2,28 @@
 
 public class User
 {
-    public User()
+    private User()
     {
         // Constructor for EF Core
     }
-    public User(int id, string userName, string name, string email, string password)
+
+    public User(int id, string username, string name, string email,
+        string password)
     {
         Id = id;
-        UserName = userName;
+        Username = username;
         Name = name;
         Email = email;
         Password = password;
     }
 
-    public int Id { get; set; }
-    public string UserName { get; set; }
+    public int Id { get; private set; }
+    public string Username { get; set; }
     public string Name { get; set; }
     public string Email { get; set; }
-    public string Password { get; set; }
+    public string Password { get; set; } 
+
+    public List<Post> Posts { get; set; } = new();
+    public List<Comment> Comments { get; set; } = new();
+    
 }

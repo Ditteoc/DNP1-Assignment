@@ -25,17 +25,24 @@ public class CreatePostView
         string body = Console.ReadLine();
         
         Console.WriteLine("Enter User Id to set post author: ");
-        int userId = int.Parse(Console.ReadLine());
+        if (!int.TryParse(Console.ReadLine(), out int userId))
+        {
+            Console.WriteLine("Invalid User ID.");
+            return;
+        }
 
         var user = await _userRepository.GetSingleAsync(userId);
         if (user == null)
         {
             Console.WriteLine("User not found");
+            return;
         }
 
-        Post post = new Post { Title = title, Body = body, UserId = userId };
+        // Brug konstruktoren til at oprette en ny Post
+        Post post = new Post(0, title, body, userId);
 
+        // Tilføj posten til repository
         await _postRepository.AddAsync(post);
-        Console.WriteLine("Post created successfully ");
+        Console.WriteLine("Post created successfully.");
     }
 }

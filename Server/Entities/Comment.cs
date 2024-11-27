@@ -2,7 +2,7 @@
 {
     public class Comment
     {
-        public Comment()
+        private Comment()
         {
             // Constructor for EF Core
         }
@@ -14,10 +14,12 @@
             UserId = userId;
         }
 
-        public int Id { get; set; }
-        public string Body { get; set; }
+        public int Id { get; private set; }
         public int PostId { get; set; }
         public int UserId { get; set; }
-        
+        public string Body { get; set; } = string.Empty;
+
+        public Post Post { get; private set; } = null!;
+        public User User { get; private set; } = null!;
     }
 }

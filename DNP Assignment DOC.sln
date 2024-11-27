@@ -20,6 +20,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Client", "Client", "{599911
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorApp", "Client\BlazorApp\BlazorApp.csproj", "{CE0E75EA-52E3-48D5-BFF6-8A9DCAA4BD6B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EfcRepositories", "Server\EfcRepositories\EfcRepositories.csproj", "{64B76540-8747-42AB-97A9-4E8D752DE89D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,7 @@ Global
 		{5860DFCC-C406-4571-BA66-38509A93B21A} = {876688D3-E86C-45BE-AFA1-58427B779863}
 		{48CF0FD3-B886-4F14-9986-3C6BC3D78B10} = {3E605011-B02D-47E7-9259-3468C51707AE}
 		{CE0E75EA-52E3-48D5-BFF6-8A9DCAA4BD6B} = {59991181-07A6-4AA8-B9AB-46E139611C5F}
+		{64B76540-8747-42AB-97A9-4E8D752DE89D} = {3E605011-B02D-47E7-9259-3468C51707AE}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{4042716A-123B-4C17-A4B0-034EBF6E0496}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -63,5 +66,9 @@ Global
 		{CE0E75EA-52E3-48D5-BFF6-8A9DCAA4BD6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CE0E75EA-52E3-48D5-BFF6-8A9DCAA4BD6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CE0E75EA-52E3-48D5-BFF6-8A9DCAA4BD6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{64B76540-8747-42AB-97A9-4E8D752DE89D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{64B76540-8747-42AB-97A9-4E8D752DE89D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{64B76540-8747-42AB-97A9-4E8D752DE89D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{64B76540-8747-42AB-97A9-4E8D752DE89D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
