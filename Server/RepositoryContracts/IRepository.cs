@@ -1,4 +1,6 @@
-﻿namespace RepositoryContracts;
+﻿using System.Linq.Expressions;
+
+namespace RepositoryContracts;
 
 public interface IRepository<T> where T : class
 {
@@ -7,4 +9,5 @@ public interface IRepository<T> where T : class
     Task DeleteAsync(int id);
     Task<T> GetSingleAsync(int id);
     Task<IEnumerable<T>> GetManyAsync();
+    Task<T?> GetSingleAsync(Expression<Func<T, bool>> predicate); // New overload
 }

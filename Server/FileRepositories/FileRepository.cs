@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Linq.Expressions;
+using System.Text.Json;
 using Entities;
 using RepositoryContracts;
 
@@ -10,7 +11,8 @@ namespace FileRepositories
 
         private readonly string _filePath;
         private readonly Func<T, int> _getId;
-      
+        private IRepository<T> _repositoryImplementation;
+
 
         public FileRepository(string filePath, Func<T, int> getId)
         {
@@ -108,6 +110,11 @@ namespace FileRepositories
         public Task<IEnumerable<T>> GetManyAsync()
         {
             return Task.FromResult(_entities.AsEnumerable());
+        }
+
+        public Task<T?> GetSingleAsync(Expression<Func<T, bool>> predicate)
+        {
+            return _repositoryImplementation.GetSingleAsync(predicate);
         }
     }
 }
