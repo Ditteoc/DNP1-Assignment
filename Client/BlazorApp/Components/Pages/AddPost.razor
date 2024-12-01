@@ -38,14 +38,18 @@
 
     private async Task AddPostAsync()
     {
+        Console.WriteLine("AddPostAsync triggered"); // Debug log
+
         try
         {
-            await PostService.AddPostAsync(newPost);
+            await PostService.CreatePostAsync(newPost);
             Navigation.NavigateTo("/posts"); // Redirect after adding
         }
         catch (Exception ex)
         {
             errorMessage = ex.Message;
+            Console.WriteLine($"Error in AddPostAsync: {errorMessage}");
         }
     }
+
 }

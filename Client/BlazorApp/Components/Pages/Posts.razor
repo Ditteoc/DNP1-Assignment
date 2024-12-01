@@ -32,15 +32,19 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        Console.WriteLine("OnInitializedAsync triggered for Posts Page.");
+
         try
         {
             posts = (await PostService.GetPostsAsync()).ToList();
+            Console.WriteLine($"Loaded {posts?.Count ?? 0} posts.");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading posts: {ex.Message}");
         }
     }
+
 
     private void NavigateToPost(int postId)
     {

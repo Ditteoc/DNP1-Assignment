@@ -4,12 +4,12 @@ using RepositoryContracts;
 
 namespace EfcRepositories;
 
-public class Repository<T> : IRepository<T> where T : class
+public class EfcRepository<T> : IRepository<T> where T : class
 {
     private readonly AppContext _dbContext;
     private readonly DbSet<T> _dbSet;
 
-    public Repository(AppContext dbContext) // Explicitly use AppContext
+    public EfcRepository(AppContext dbContext) // Explicitly use AppContext
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _dbSet = _dbContext.Set<T>() ?? throw new ArgumentNullException(nameof(_dbSet));

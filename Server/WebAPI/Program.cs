@@ -27,14 +27,16 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<AppContext>(options =>
     options.UseSqlite(@"Data Source=C:\Users\ditte\OneDrive - ViaUC\3 Semester\DNP 1\app.db"));
 
-// Register generic repository and custom repositories
-builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+// Register generic repository and custom repositories (EFC)
+builder.Services.AddScoped(typeof(IRepository<>), typeof(EfcRepository<>));
 
+/*
 // Register file-based repositories
 builder.Services.AddScoped<IRepository<Post>>(provider =>
     new FileRepository<Post>("posts.json", p => p.Id));
 builder.Services.AddScoped<IRepository<Comment>>(provider =>
     new FileRepository<Comment>("comments.json", c => c.Id));
+*/
 
 var app = builder.Build();
 

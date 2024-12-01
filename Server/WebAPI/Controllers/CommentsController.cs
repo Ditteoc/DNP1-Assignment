@@ -6,7 +6,7 @@ using RepositoryContracts;
 namespace WebAPI.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/comments")]
 public class CommentsController : ControllerBase
 {
     private readonly IRepository<User> _userRepository;

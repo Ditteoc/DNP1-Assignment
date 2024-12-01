@@ -23,24 +23,23 @@ public class PostsController : ControllerBase
         _commentRepository = commentRepository;
     }
 
-    // Opret en ny post
     [HttpPost]
     public async Task<IActionResult> CreatePost([FromBody] CreatePostDTO requestPost)
     {
         try
         {
+            Console.WriteLine($"Received CreatePost request: Title={requestPost.Title}, Body={requestPost.Body}, UserId={requestPost.UserId}");
+
             if (requestPost == null)
-            {
                 return BadRequest("Invalid post data.");
-            }
 
             var user = await _userRepository.GetSingleAsync(requestPost.UserId);
             if (user == null)
             {
+                Console.WriteLine($"User with ID {requestPost.UserId} not found.");
                 return NotFound($"User with ID {requestPost.UserId} not found.");
             }
 
-            // Opret ny Post med parameteriseret konstruktor
             var newPost = new Post(0, requestPost.Title, requestPost.Body, requestPost.UserId);
             var createdPost = await _postRepository.AddAsync(newPost);
 
@@ -50,7 +49,7 @@ public class PostsController : ControllerBase
                 Title = createdPost.Title,
                 Body = createdPost.Body,
                 UserName = user.Username,
-                Comments = new List<CommentDTO>() // Tom liste ved oprettelse
+                Comments = new List<CommentDTO>()
             };
 
             return CreatedAtAction(nameof(GetPostById), new { id = postDto.Id }, postDto);
@@ -62,7 +61,37 @@ public class PostsController : ControllerBase
         }
     }
 
-    // Hent en enkelt post
+    [HttpGet]
+    public async Task<IActionResult> GetAllPosts()
+    {
+        try
+        {
+            var posts = await _postRepository.GetManyAsync();
+
+            var postDtos = posts.Select(post => new PostDTO
+            {
+                Id = post.Id,
+                Title = post.Title,
+                Body = post.Body,
+                UserName = post.User?.Username ?? "Unknown",
+                Comments = post.Comments.Select(c => new CommentDTO
+                {
+                    Id = c.Id,
+                    Body = c.Body,
+                    PostId = c.PostId,
+                    UserName = c.User?.Username ?? "Unknown"
+                }).ToList()
+            });
+
+            return Ok(postDtos);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetAllPosts: {ex.Message}");
+            return StatusCode(500, "An error occurred while retrieving posts.");
+        }
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPostById(int id)
     {
@@ -70,12 +99,9 @@ public class PostsController : ControllerBase
         {
             var post = await _postRepository.GetSingleAsync(id);
             if (post == null)
-            {
                 return NotFound("Post not found.");
-            }
 
             var user = await _userRepository.GetSingleAsync(post.UserId);
-
             var comments = (await _commentRepository.GetManyAsync())
                 .Where(c => c.PostId == id)
                 .Select(async c => new CommentDTO
@@ -104,22 +130,17 @@ public class PostsController : ControllerBase
         }
     }
 
-    // Opdater en post
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdatePost(int id, [FromBody] UpdatePostDTO postDto)
     {
         try
         {
             if (postDto == null || id != postDto.Id)
-            {
                 return BadRequest("Invalid post data.");
-            }
 
             var post = await _postRepository.GetSingleAsync(id);
             if (post == null)
-            {
                 return NotFound("Post not found.");
-            }
 
             post.Title = postDto.Title;
             post.Body = postDto.Body;
@@ -134,7 +155,6 @@ public class PostsController : ControllerBase
         }
     }
 
-    // Slet en post
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeletePost(int id)
     {
@@ -142,9 +162,7 @@ public class PostsController : ControllerBase
         {
             var post = await _postRepository.GetSingleAsync(id);
             if (post == null)
-            {
                 return NotFound($"Post with ID {id} not found.");
-            }
 
             await _postRepository.DeleteAsync(id);
             return NoContent();

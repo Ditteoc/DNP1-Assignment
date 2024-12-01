@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddScoped(sp => new HttpClient
     {
-        BaseAddress = new Uri("http://localhost:5076/")
+        BaseAddress = new Uri("http://localhost:5076/api/")
     }
 ); // HttpClient skal pege på APIéns port
 

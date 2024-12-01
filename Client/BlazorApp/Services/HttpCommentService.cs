@@ -14,16 +14,32 @@ public class HttpCommentService : ICommentService
         
     public async Task<CommentDTO> AddCommentAsync(CreateCommentDTO request)
     {
-        HttpResponseMessage response = await client.PostAsJsonAsync("api/comments", request);
-        string responseString = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            throw new Exception(responseString);
+            string apiUrl = "comments"; // The endpoint you're calling
+            string fullUrl = $"{client.BaseAddress}{apiUrl}";
+            Console.WriteLine($"Sending request to: {fullUrl}");
+            Console.WriteLine($"Payload: {JsonSerializer.Serialize(request)}");
+
+            HttpResponseMessage response = await client.PostAsJsonAsync(apiUrl, request);
+            string responseString = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"API Response: {response.StatusCode} - {responseString}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"HTTP {response.StatusCode}: {responseString}");
+            }
+
+            return JsonSerializer.Deserialize<CommentDTO>(responseString, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         }
-        
-        return JsonSerializer.Deserialize<CommentDTO>(responseString, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in AddCommentAsync: {ex.Message}");
+            throw;
+        }
     }
+
+
 
     public async Task<IEnumerable<CommentDTO>> GetCommentsByPostIdAsync(int postId)
     {

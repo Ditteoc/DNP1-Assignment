@@ -92,10 +92,10 @@ else
             var updateUser = new UpdateUserDTO
             {
                 Id = id,
-                Username = "UpdatedUsername",
-                Name = "Updated Name",
-                Email = "updated@example.com",
-                Password = "UpdatedPassword"
+                Username = "",
+                Name = "",
+                Email = "",
+                Password = ""
             };
 
             await UserService.UpdateUserAsync(id, updateUser);

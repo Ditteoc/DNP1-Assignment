@@ -76,13 +76,22 @@ else
     {
         try
         {
+            Console.WriteLine($"Adding comment: {newComment.Body}, PostId: {newComment.PostId}, UserId: {newComment.UserId}");
+
+            // Call the API
             await CommentService.AddCommentAsync(newComment);
+
+            // Refresh the post to show the new comment
             post = await PostService.GetPostAsync(postId);
+
             newComment.Body = string.Empty; // Reset the form
+            Console.WriteLine("Comment added successfully.");
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
+            errorMessage = $"Error adding comment: {ex.Message}";
+            Console.WriteLine($"Error in AddCommentAsync: {errorMessage}");
         }
     }
+
 }

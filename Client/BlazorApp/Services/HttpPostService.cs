@@ -13,20 +13,26 @@ public class HttpPostService : IPostService
     }
 
     // Opretter et nyt indlæg
+
+    // Henter et specifikt indlæg
     public async Task<PostDTO> CreatePostAsync(CreatePostDTO request)
     {
+        Console.WriteLine($"Sending request to create post: {JsonSerializer.Serialize(request)}");
+
         HttpResponseMessage response = await client.PostAsJsonAsync("posts", request);
         string responseString = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"API Response: {response.StatusCode} - {responseString}");
 
         if (!response.IsSuccessStatusCode)
         {
             throw new Exception(responseString);
         }
-        
+
         return JsonSerializer.Deserialize<PostDTO>(responseString, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
     }
 
-    // Henter et specifikt indlæg
+    
+
     public async Task<PostDTO> GetPostAsync(int id)
     {
         HttpResponseMessage response = await client.GetAsync($"posts/{id}");
@@ -43,17 +49,38 @@ public class HttpPostService : IPostService
     // Henter alle indlæg
     public async Task<IEnumerable<PostDTO>> GetPostsAsync()
     {
-        HttpResponseMessage response = await client.GetAsync("posts");
-        string responseString = await response.Content.ReadAsStringAsync();
-
-        Console.WriteLine($"API Response: {responseString}"); // Log the raw JSON response
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            throw new Exception(responseString);
-        }
+            HttpResponseMessage response = await client.GetAsync("posts");
+            string responseString = await response.Content.ReadAsStringAsync();
 
-        return JsonSerializer.Deserialize<IEnumerable<PostDTO>>(responseString, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+            Console.WriteLine($"API Response Status: {response.StatusCode}");
+            Console.WriteLine($"API Response Content: {responseString}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"HTTP {response.StatusCode}: {responseString}");
+            }
+
+            if (string.IsNullOrWhiteSpace(responseString))
+            {
+                throw new Exception("API returned an empty response.");
+            }
+
+            var posts = JsonSerializer.Deserialize<IEnumerable<PostDTO>>(responseString, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (posts == null)
+            {
+                throw new Exception("Failed to deserialize API response to PostDTO.");
+            }
+
+            return posts;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetPostsAsync: {ex.Message}");
+            throw; // Rethrow the exception to propagate it
+        }
     }
 
 
